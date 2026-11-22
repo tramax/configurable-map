@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:server": "tsx --tsconfig server/tsconfig.json watch server/index.ts",
+    "dev:server": "tsx watch --tsconfig server/tsconfig.json server/index.ts",
     "build":"tsc -b && vite build",
     "preview": "vite preview",
     "db:generate": "drizzle-kit generate",
