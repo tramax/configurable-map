@@ -1,0 +1,4 @@
+allowBuilds:
+  "@vaadin/vaadin-usage-statistics": false
+  better-sqlite3: true
+  esbuild: true

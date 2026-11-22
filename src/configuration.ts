@@ -7,18 +7,10 @@ import SimpleMarkerSymbol from "@arcgis/core/symbols/SimpleMarkerSymbol";
 import FieldColumnTemplate from "@arcgis/core/widgets/FeatureTable/support/FieldColumnTemplate";
 import TableTemplate from "@arcgis/core/widgets/FeatureTable/support/TableTemplate";
 
-type SizeStop = { value: number; size: number };
-type ColorStop = { value: number; color: string };
+import type { Configuration } from "./configSchema";
 
-export type Configuration = {
-  symbolConfig: {
-    size?: { field: string; stops: SizeStop[] };
-    color?: { field: string; stops: ColorStop[] };
-  };
-  tableConfig: {
-    columns: string[];
-  };
-};
+// The schema lives in configSchema.ts so the backend can share it; re-exported for existing imports.
+export type { Configuration, SizeStop, ColorStop } from "./configSchema";
 
 export const configure = (
   layer: FeatureLayer,
