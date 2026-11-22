@@ -2,7 +2,7 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { randomUUID } from "node:crypto";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
-import { hashPassword } from "../auth/password";
+import { hashPassword } from "@modules/auth";
 import { createDb } from "./client";
 import { users } from "./schema";
 
@@ -17,7 +17,7 @@ const DB_PATH = process.env.DB_PATH ?? "./data/app.db";
 
 mkdirSync(dirname(DB_PATH), { recursive: true });
 const db = createDb(DB_PATH);
-migrate(db, { migrationsFolder: "./server/db/migrations" });
+migrate(db, { migrationsFolder: "./server/shared/db/migrations" });
 
 for (const { username, password } of DEMO_USERS) {
   const passwordHash = hashPassword(password);

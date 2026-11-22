@@ -7,6 +7,7 @@ import "@arcgis/map-components/components/arcgis-expand";
 import type { ArcgisMapCustomEvent } from "@arcgis/map-components";
 import type { ArcgisFeatureTable } from "@arcgis/map-components/components/arcgis-feature-table";
 import { Configuration, configure } from "./configuration";
+import LoginMenu from "./auth/LoginMenu";
 
 // This is a REST API - you can open this url on the browser to see the available fields in the layer
 const FEATURE_LAYER_URL =
@@ -73,6 +74,7 @@ export default function App() {
         width: "100vw",
       }}
     >
+      <LoginMenu />
       <arcgis-map
         id="map"
         basemap="topo-vector"

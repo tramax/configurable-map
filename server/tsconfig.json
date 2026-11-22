@@ -11,7 +11,12 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "isolatedModules": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "paths": {
+      "@shared/*": ["./shared/*"],
+      "@modules/*": ["./modules/*"],
+      "@src/*": ["../src/*"]
+    }
   },
   "include": ["./**/*.ts", "../drizzle.config.ts"]
 }
