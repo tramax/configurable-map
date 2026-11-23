@@ -143,12 +143,16 @@ export default function ConfigurationsMenu({ user, datasetId, getCurrent, onOpen
                   <div slot="message">You haven't saved any configurations yet.</div>
                 </calcite-notice>
               ) : (
-                <calcite-list label="Your saved configurations" selection-mode="none">
+                <calcite-list label="Configurations" selection-mode="none">
                   {saved.map((item) => (
                     <calcite-list-item
                       key={item.id}
                       label={item.name}
-                      description={`Saved ${new Date(item.createdAt).toLocaleString()}`}
+                      description={
+                        item.visibility === "system"
+                          ? item.isDefault ? "Default configuration" : "Predefined configuration"
+                          : `Saved ${new Date(item.createdAt).toLocaleString()}`
+                      }
                       icon-start={item.id === activeId ? "check" : undefined}
                       oncalciteListItemSelect={() => handleOpen(item)}
                     />

@@ -6,11 +6,11 @@ import "@arcgis/map-components/components/arcgis-feature-table";
 import "@arcgis/map-components/components/arcgis-expand";
 import type { ArcgisMapCustomEvent } from "@arcgis/map-components";
 import type { ArcgisFeatureTable } from "@arcgis/map-components/components/arcgis-feature-table";
-import { applySymbology, applyTableConfig, Configuration, configure, getTableColumns } from "./configuration";
+import { applySymbology, applyTableConfig, Configuration, getTableColumns } from "./configuration";
 import { AuthUser, fetchCurrentUser } from "./auth/api";
 import LoginMenu from "./auth/LoginMenu";
 import ConfigurationsMenu from "./configurations/ConfigurationsMenu";
-import type { SavedConfiguration } from "./configurations/api";
+import { fetchDefaultConfiguration, type SavedConfiguration } from "./configurations/api";
 import SymbologyPanel from "./symbology/SymbologyPanel";
 
 // This is a REST API - you can open this url on the browser to see the available fields in the layer
@@ -20,24 +20,32 @@ const FEATURE_LAYER_URL =
 // Saved configurations are stored per dataset.
 const DATASET_ID = "landscape-trees";
 
-// SAMPLE CONFIG
-const CONFIG: Configuration = {
-  symbolConfig: {
-    color: { field: "Leaf_Area", stops: [{value: 10, color: "#ffffff"}, {value: 40000, color: "#00fd00"}]},
-    size: { field: "Leaf_Bmass", stops: [{value: 0, size: 5}, {value: 700, size: 40}]}
-  },
-  tableConfig: {
-    columns: ["Leaf_Area", "Leaf_Bmass"]
-  }
-};
+type SymbolConfig = Configuration["symbolConfig"];
+type TableConfig = Configuration["tableConfig"];
+
+// With no default configuration (none stored, or the server could not be reached) the points get
+// this plain symbology and the table keeps its own default columns.
+const NO_SYMBOLOGY: SymbolConfig = {};
 
 export default function App() {
   const [layer, setLayer] = useState<FeatureLayer | null>(null);
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [symbolConfig, setSymbolConfig] = useState(CONFIG.symbolConfig);
+  // The default configuration of the dataset, asked for once when the app starts. Resolves to
+  // `null` instead of failing, so the app still opens without one.
+  const [defaultRequest] = useState(() =>
+    fetchDefaultConfiguration(DATASET_ID).then(
+      (saved) => saved?.config ?? null,
+      (err) => {
+        console.warn("Couldn't load the default configuration; starting without one.", err);
+        return null;
+      },
+    ),
+  );
+  const [defaultTable, setDefaultTable] = useState<TableConfig | null>(null);
+  const [symbolConfig, setSymbolConfig] = useState(NO_SYMBOLOGY);
   // What the symbology panel starts from. It keeps its own draft, so opening a saved configuration
   // hands it a new `initial` and a new `version`, which remounts it.
-  const [panelStart, setPanelStart] = useState({ initial: CONFIG.symbolConfig, version: 0 });
+  const [panelStart, setPanelStart] = useState({ initial: NO_SYMBOLOGY, version: 0 });
   const tableRef = useRef<ArcgisFeatureTable | null>(null);
 
   // Restore an existing session on load.
@@ -51,10 +59,11 @@ export default function App() {
     };
   }, []);
 
-  // Table + initial symbology, once the layer (and with it the table) exists.
+  // The default's table columns, once the layer (and with it the table) exists. Its symbology is
+  // already on the layer by then (see handleReady) and in the state above.
   useEffect(() => {
-    if (layer && tableRef.current) configure(layer, tableRef.current, CONFIG);
-  }, [layer]);
+    if (layer && tableRef.current && defaultTable) applyTableConfig(layer, tableRef.current, defaultTable);
+  }, [layer, defaultTable]);
 
   // Symbology edits from the settings panel.
   useEffect(() => {
@@ -67,10 +76,10 @@ export default function App() {
     return {
       symbolConfig,
       tableConfig: {
-        columns: layer && table ? getTableColumns(layer, table) : CONFIG.tableConfig.columns,
+        columns: layer && table ? getTableColumns(layer, table) : (defaultTable?.columns ?? []),
       },
     };
-  }, [layer, symbolConfig]);
+  }, [layer, symbolConfig, defaultTable]);
 
   const openConfiguration = useCallback(
     ({ config }: SavedConfiguration) => {
@@ -82,7 +91,7 @@ export default function App() {
     [layer],
   );
 
-  const handleReady = useCallback((event: ArcgisMapCustomEvent<void>) => {
+  const handleReady = useCallback(async (event: ArcgisMapCustomEvent<void>) => {
     const view = event.target.view;
 
     const layer = new FeatureLayer({
@@ -106,12 +115,20 @@ export default function App() {
       },
     });
 
+    // Wait for the layer and the default, and style the layer before it joins the map, so the
+    // points are never drawn in the service's own style first.
+    const [defaultConfig] = await Promise.all([defaultRequest, layer.load()]);
+    if (defaultConfig) applySymbology(layer, defaultConfig.symbolConfig);
+
     view?.map?.add(layer);
-    layer.when(() => {
-      if (layer.fullExtent) view?.goTo(layer.fullExtent).catch(() => {});
-      setLayer(layer);
-    });
-  }, []);
+    if (layer.fullExtent) view?.goTo(layer.fullExtent).catch(() => {});
+
+    // One batch: the panel and the table are rendered once the layer is set, already knowing their start.
+    setSymbolConfig(defaultConfig?.symbolConfig ?? NO_SYMBOLOGY);
+    setPanelStart((p) => ({ initial: defaultConfig?.symbolConfig ?? NO_SYMBOLOGY, version: p.version + 1 }));
+    setDefaultTable(defaultConfig?.tableConfig ?? null);
+    setLayer(layer);
+  }, [defaultRequest]);
 
   return (
     <div
