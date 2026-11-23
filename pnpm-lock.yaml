@@ -17,6 +17,9 @@ importers:
       '@arcgis/map-components-react':
         specifier: ^5.1.15
         version: 5.1.15(@arcgis/core@5.1.15)(@types/react@19.2.18)(react@19.2.8)
+      '@esri/calcite-components':
+        specifier: ^5.1.2
+        version: 5.1.2
       '@hono/node-server':
         specifier: ^2.1.11
         version: 2.1.11(hono@4.13.19)

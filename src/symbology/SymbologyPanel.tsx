@@ -1,6 +1,15 @@
-import { ReactNode, useEffect, useId, useRef, useState } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import summaryStatistics from "@arcgis/core/smartMapping/statistics/summaryStatistics";
 import type FeatureLayer from "@arcgis/core/layers/FeatureLayer";
+import "@esri/calcite-components/components/calcite-button";
+import "@esri/calcite-components/components/calcite-input-number";
+import "@esri/calcite-components/components/calcite-label";
+import "@esri/calcite-components/components/calcite-loader";
+import "@esri/calcite-components/components/calcite-notice";
+import "@esri/calcite-components/components/calcite-option";
+import "@esri/calcite-components/components/calcite-popover";
+import "@esri/calcite-components/components/calcite-select";
+import "@esri/calcite-components/components/calcite-switch";
 import type { ColorStop, Configuration, SizeStop } from "../configSchema";
 // @ts-ignore: the CSS side-effect import is handled by the application bundler
 import "./SymbologyPanel.css";
@@ -121,18 +130,18 @@ function NumberInput({
   }, [value]);
 
   return (
-    <input
-      className={`symbology__input ${className ?? ""}`}
-      type="number"
-      inputMode="decimal"
+    <calcite-input-number
+      className={className}
+      scale="s"
       step="any"
       min={min}
-      aria-label={label}
+      label={label}
+      suffix-text="px"
       value={text}
-      onChange={(e) => {
-        setText(e.target.value);
-        const next =
-          e.target.value.trim() === "" ? NaN : Number(e.target.value);
+      oncalciteInputNumberInput={(e) => {
+        const raw = e.target.value;
+        setText(raw);
+        const next = raw.trim() === "" ? NaN : Number(raw);
         lastReported.current = next;
         onChange(next);
       }}
@@ -182,7 +191,6 @@ function ChannelSection<A>({
   renderControl,
   renderPreview,
 }: ChannelSectionProps<A>) {
-  const id = useId();
   const [loading, setLoading] = useState(false);
   const [statsError, setStatsError] = useState<string | null>(null);
   const request = useRef(0); // ignores stale statistics responses
@@ -259,43 +267,39 @@ function ChannelSection<A>({
     : [];
 
   return (
-    <fieldset className="symbology__section">
-      <legend className="symbology__legend">
-        <label className="symbology__toggle">
-          <input
-            type="checkbox"
-            checked={enabled}
-            disabled={fields.length === 0}
-            onChange={(e) => toggle(e.target.checked)}
-          />
-          {title}
-        </label>
-      </legend>
+    <section className="symbology__section">
+      <calcite-label layout="inline">
+        <calcite-switch
+          checked={enabled}
+          disabled={fields.length === 0}
+          oncalciteSwitchChange={(e) => toggle(e.target.checked)}
+        />
+        {title}
+      </calcite-label>
 
       {enabled && value && (
         <div aria-busy={loading}>
-          <label className="symbology__label" htmlFor={`${id}-field`}>
+          <calcite-label>
             Field
-          </label>
-          <select
-            id={`${id}-field`}
-            className="symbology__input"
-            value={value.field}
-            disabled={loading}
-            onChange={(e) => void selectField(e.target.value)}
-          >
-            {!fields.some((f) => f.name === value.field) && (
-              <option value={value.field}>{value.field}</option>
-            )}
-            {fields.map((f) => (
-              <option key={f.name} value={f.name}>
-                {f.label}
-              </option>
-            ))}
-          </select>
+            <calcite-select
+              label="Field"
+              value={value.field}
+              disabled={loading}
+              oncalciteSelectChange={(e) => void selectField(e.target.value)}
+            >
+              {!fields.some((f) => f.name === value.field) && (
+                <calcite-option value={value.field}>{value.field}</calcite-option>
+              )}
+              {fields.map((f) => (
+                <calcite-option key={f.name} value={f.name}>
+                  {f.label}
+                </calcite-option>
+              ))}
+            </calcite-select>
+          </calcite-label>
 
           {loading ? (
-            <p className="symbology__hint">Reading value range…</p>
+            <calcite-loader inline label="Reading value range" text="Reading value range…" />
           ) : (
             <>
               <div className="symbology__preview">
@@ -324,44 +328,53 @@ function ChannelSection<A>({
                         {pct}%
                       </span>
                       {!fixedStops && (
-                        <button
-                          type="button"
-                          className="symbology__icon-button"
-                          aria-label={`Remove ${title.toLowerCase()} stop ${i + 1}`}
+                        <calcite-button
+                          appearance="transparent"
+                          kind="neutral"
+                          scale="s"
+                          icon-start="x"
+                          label={`Remove ${title.toLowerCase()} stop ${i + 1}`}
                           disabled={value.attrs.length <= 2}
                           onClick={() => removeStop(i)}
-                        >
-                          ×
-                        </button>
+                        />
                       )}
                     </li>
                   );
                 })}
               </ul>
               {!fixedStops && (
-                <button
-                  type="button"
-                  className="symbology__link-button"
+                <calcite-button
+                  appearance="transparent"
+                  scale="s"
+                  icon-start="plus"
                   onClick={addStop}
                 >
-                  + Add stop
-                </button>
+                  Add stop
+                </calcite-button>
               )}
             </>
           )}
 
-          {statsError && <p className="symbology__hint">{statsError}</p>}
+          {statsError && (
+            <calcite-notice open kind="warning" scale="s" width="full" icon>
+              <div slot="message">{statsError}</div>
+            </calcite-notice>
+          )}
           {error && (
-            <p className="symbology__error" role="alert">
-              {error} Changes aren't applied to the map until this is fixed.
-            </p>
+            <calcite-notice open kind="danger" scale="s" width="full" icon role="alert">
+              <div slot="message">
+                {error} Changes aren't applied to the map until this is fixed.
+              </div>
+            </calcite-notice>
           )}
         </div>
       )}
       {fields.length === 0 && (
-        <p className="symbology__hint">No numeric fields available.</p>
+        <calcite-notice open kind="neutral" scale="s" width="full">
+          <div slot="message">No numeric fields available.</div>
+        </calcite-notice>
       )}
-    </fieldset>
+    </section>
   );
 }
 
@@ -411,28 +424,8 @@ export default function SymbologyPanel({
   const [resetKey, setResetKey] = useState(0);
 
   const fields = getNumericFields(layer);
-  const rootRef = useRef<HTMLDivElement>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const panelId = useId();
-
-  useEffect(() => {
-    if (!open) return;
-    const onPointerDown = (e: PointerEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
-    };
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setOpen(false);
-        buttonRef.current?.focus();
-      }
-    };
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [open]);
+  // The popover anchors to (and is toggled by) this button; kept in state so the popover re-renders once it exists.
+  const [button, setButton] = useState<HTMLElement | null>(null);
 
   /** Updates one channel; pushes to the map only when both channels are currently valid. */
   function update<K extends keyof Draft>(
@@ -460,45 +453,32 @@ export default function SymbologyPanel({
   }
 
   return (
-    <div className="symbology" ref={rootRef}>
-      <button
-        ref={buttonRef}
-        type="button"
-        className="symbology__button"
-        aria-label="Symbology settings"
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        aria-controls={panelId}
+    <div className="symbology">
+      <calcite-button
+        ref={setButton}
+        round
+        icon-start="palette"
+        kind={open ? "brand" : "neutral"}
+        label="Symbology settings"
         title="Symbology settings"
-        onClick={() => setOpen((o) => !o)}
-      >
-        <svg
-          viewBox="0 0 24 24"
-          width="20"
-          height="20"
-          aria-hidden="true"
-          fill="currentColor"
-        >
-          <path d="M12 3a9 9 0 1 0 0 18c1.1 0 2-.9 2-2 0-.52-.2-1-.52-1.35a1.5 1.5 0 0 1 1.1-2.52H17a4 4 0 0 0 4-4c0-4.42-4.03-8.13-9-8.13Zm-5.5 9a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3Zm3-4a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3Zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3Zm3 4a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3Z" />
-        </svg>
-      </button>
+      />
 
-      {open && (
-        <div
-          id={panelId}
-          className="symbology__panel"
-          role="dialog"
-          aria-label="Symbology settings"
-        >
+      <calcite-popover
+        referenceElement={button ?? ""}
+        open={open}
+        autoClose
+        placement="bottom-end"
+        overlayPositioning="fixed"
+        label="Symbology settings"
+        oncalcitePopoverOpen={() => setOpen(true)}
+        oncalcitePopoverClose={() => setOpen(false)}
+      >
+        <div className="symbology__panel">
           <div className="symbology__header">
             <h2 className="symbology__title">Symbology</h2>
-            <button
-              type="button"
-              className="symbology__link-button"
-              onClick={reset}
-            >
+            <calcite-button appearance="transparent" scale="s" onClick={reset}>
               Reset
-            </button>
+            </calcite-button>
           </div>
 
           <ChannelSection<ColorAttrs>
@@ -544,16 +524,12 @@ export default function SymbologyPanel({
                 : "Every size must be a number above 0."
             }
             renderControl={(attrs, patch, label) => (
-              <span className="symbology__size-control">
-                <NumberInput
-                  className="symbology__size-input"
-                  label={`${label} size in pixels`}
-                  min={1}
-                  value={attrs.size}
-                  onChange={(v) => patch({ size: v })}
-                />
-                <span className="symbology__unit">px</span>
-              </span>
+              <NumberInput
+                label={`${label} size in pixels`}
+                min={1}
+                value={attrs.size}
+                onChange={(v) => patch({ size: v })}
+              />
             )}
             renderPreview={(attrs) => (
               <div className="symbology__dots" aria-hidden="true">
@@ -568,7 +544,7 @@ export default function SymbologyPanel({
             )}
           />
         </div>
-      )}
+      </calcite-popover>
     </div>
   );
 }

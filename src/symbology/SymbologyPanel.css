@@ -3,113 +3,38 @@
   top: 12px;
   right: 60px; /* sits to the left of the account button */
   z-index: 1000; /* above the map and its widgets */
-  font-family: inherit;
-  font-size: 14px;
-}
-
-.symbology__button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  border: 1px solid #c4c4c4;
-  border-radius: 50%;
-  background: #fff;
-  color: #4a4a4a;
-  cursor: pointer;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
-}
-
-.symbology__button:hover {
-  background: #f3f3f3;
-}
-
-.symbology__button[aria-expanded="true"] {
-  background: #0079c1;
-  border-color: #0079c1;
-  color: #fff;
-}
-
-.symbology__button:focus-visible,
-.symbology__input:focus-visible,
-.symbology__color:focus-visible,
-.symbology__icon-button:focus-visible,
-.symbology__link-button:focus-visible,
-.symbology__toggle input:focus-visible {
-  outline: 2px solid #0079c1;
-  outline-offset: 2px;
 }
 
 .symbology__panel {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
+  box-sizing: border-box;
   width: 320px;
   max-height: calc(100vh - 80px);
   overflow-y: auto;
-  box-sizing: border-box;
-  padding: 16px;
-  border-radius: 4px;
-  background: #fff;
-  color: #323232;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+  padding: 12px;
 }
 
 .symbology__header {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .symbology__title {
   margin: 0;
-  font-size: 16px;
-  font-weight: 600;
+  font-size: var(--calcite-font-size-1);
+  font-weight: var(--calcite-font-weight-medium);
 }
 
 .symbology__section {
-  margin: 0 0 12px;
-  padding: 8px 12px 12px;
-  border: 1px solid #e0e0e0;
+  margin-bottom: 12px;
+  padding: 4px 12px 12px;
+  border: 1px solid var(--calcite-color-border-3);
   border-radius: 4px;
 }
 
 .symbology__section:last-child {
   margin-bottom: 0;
-}
-
-.symbology__legend {
-  padding: 0 4px;
-  font-weight: 600;
-}
-
-.symbology__toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-}
-
-.symbology__label {
-  display: block;
-  margin-bottom: 4px;
-  font-size: 12px;
-  color: #6a6a6a;
-}
-
-.symbology__input {
-  display: block;
-  width: 100%;
-  box-sizing: border-box;
-  padding: 6px 8px;
-  border: 1px solid #c4c4c4;
-  border-radius: 2px;
-  background: #fff;
-  font: inherit;
-  color: #323232;
 }
 
 .symbology__preview {
@@ -118,7 +43,7 @@
 
 .symbology__ramp {
   height: 10px;
-  border: 1px solid #c4c4c4;
+  border: 1px solid var(--calcite-color-border-1);
   border-radius: 2px;
 }
 
@@ -146,86 +71,28 @@
 
 .symbology__stop {
   display: grid;
-  grid-template-columns: 92px 1fr 28px;
+  grid-template-columns: 112px 1fr 28px;
   align-items: center;
   gap: 8px;
   margin-bottom: 6px;
 }
 
 .symbology__stop--fixed {
-  grid-template-columns: 92px 1fr;
+  grid-template-columns: 112px 1fr;
 }
 
+/* No Calcite color field fits a single stop row, so this stays the native picker. */
 .symbology__color {
   width: 100%;
   height: 32px;
   padding: 2px;
-  border: 1px solid #c4c4c4;
+  border: 1px solid var(--calcite-color-border-1);
   border-radius: 2px;
-  background: #fff;
+  background: var(--calcite-color-foreground-1);
   cursor: pointer;
 }
 
 .symbology__percent {
   font-variant-numeric: tabular-nums;
-  color: #6a6a6a;
-}
-
-.symbology__size-control {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.symbology__unit {
-  font-size: 12px;
-  color: #6a6a6a;
-}
-
-.symbology__icon-button {
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: 0;
-  border-radius: 2px;
-  background: transparent;
-  color: #6a6a6a;
-  font-size: 18px;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.symbology__icon-button:hover:not(:disabled) {
-  background: #f3f3f3;
-  color: #d83020;
-}
-
-.symbology__icon-button:disabled {
-  opacity: 0.35;
-  cursor: default;
-}
-
-.symbology__link-button {
-  padding: 2px 0;
-  border: 0;
-  background: none;
-  color: #0079c1;
-  font: inherit;
-  cursor: pointer;
-}
-
-.symbology__link-button:hover {
-  text-decoration: underline;
-}
-
-.symbology__hint {
-  margin: 8px 0 0;
-  font-size: 12px;
-  color: #6a6a6a;
-}
-
-.symbology__error {
-  margin: 8px 0 0;
-  font-size: 12px;
-  color: #d83020;
+  color: var(--calcite-color-text-3);
 }
