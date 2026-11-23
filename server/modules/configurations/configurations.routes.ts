@@ -1,31 +1,72 @@
 import { randomUUID } from "node:crypto";
+import { createRoute, z } from "@hono/zod-openapi";
 import { and, desc, eq, or } from "drizzle-orm";
-import { Hono } from "hono";
 import { requireAuth } from "@modules/auth";
 import type { Db } from "@shared/db/client";
 import { configurations, type ConfigurationRecord } from "@shared/db/schema";
-import type { AppEnv } from "@shared/types";
-import { parseConfiguration, parseDatasetId, parseName } from "./validate";
+import { COOKIE_AUTH, createRouter, errorResponse, requireJson } from "@shared/openapi";
+import { createBodySchema, listQuerySchema, savedConfigurationSchema } from "./configurations.schemas";
 
 /** What the API returns: the record without the owner (clients only ever see what they may use). */
-const toDto = (r: ConfigurationRecord) => ({
+const toDto = (r: ConfigurationRecord): z.infer<typeof savedConfigurationSchema> => ({
   id: r.id,
   datasetId: r.datasetId,
   name: r.name,
   visibility: r.visibility,
   isDefault: r.isDefault,
-  createdAt: r.createdAt,
+  createdAt: r.createdAt.toISOString(),
   config: r.config,
 });
 
+const security = [{ [COOKIE_AUTH]: [] }];
+
+const listRoute = createRoute({
+  method: "get",
+  path: "/",
+  tags: ["Configurations"],
+  summary: "List the configurations of a dataset",
+  description:
+    "The configurations the user may open: platform (system) ones, published ones, and their own. Newest first.",
+  security,
+  request: { query: listQuerySchema },
+  responses: {
+    200: {
+      description: "The configurations",
+      content: { "application/json": { schema: z.array(savedConfigurationSchema) } },
+    },
+    400: errorResponse("`datasetId` is missing"),
+    401: errorResponse("Not signed in"),
+  },
+});
+
+const createConfigRoute = createRoute({
+  method: "post",
+  path: "/",
+  tags: ["Configurations"],
+  summary: "Save a configuration",
+  description: "Saves a new private configuration owned by the signed-in user.",
+  security,
+  middleware: [requireJson] as const,
+  request: {
+    body: { required: true, content: { "application/json": { schema: createBodySchema } } },
+  },
+  responses: {
+    201: {
+      description: "The saved configuration",
+      content: { "application/json": { schema: savedConfigurationSchema } },
+    },
+    400: errorResponse("The request is invalid; the message names the first problem"),
+    401: errorResponse("Not signed in"),
+    415: errorResponse("Body is not JSON"),
+  },
+});
+
 export function configurationRoutes(db: Db) {
-  const router = new Hono<AppEnv>();
+  const router = createRouter();
   router.use("*", requireAuth);
 
-  /** Configurations of a dataset the user may open: platform ones, published ones, and their own. */
-  router.get("/", (c) => {
-    const dataset = parseDatasetId(c.req.query("datasetId"));
-    if (!dataset.ok) return c.json({ error: dataset.error }, 400);
+  router.openapi(listRoute, (c) => {
+    const { datasetId } = c.req.valid("query");
     const user = c.var.user!;
 
     const rows = db
@@ -33,7 +74,7 @@ export function configurationRoutes(db: Db) {
       .from(configurations)
       .where(
         and(
-          eq(configurations.datasetId, dataset.value),
+          eq(configurations.datasetId, datasetId),
           or(
             eq(configurations.visibility, "system"),
             eq(configurations.visibility, "public"),
@@ -43,34 +84,21 @@ export function configurationRoutes(db: Db) {
       )
       .orderBy(desc(configurations.createdAt))
       .all();
-    return c.json(rows.map(toDto));
+    return c.json(rows.map(toDto), 200);
   });
 
-  /** Saves a new private configuration for the signed-in user. */
-  router.post("/", async (c) => {
-    // Requiring JSON means a cross-site HTML form can't trigger this request.
-    if (!c.req.header("content-type")?.includes("application/json")) {
-      return c.json({ error: "Expected JSON" }, 415);
-    }
-    const body = await c.req.json().catch(() => null);
-    if (typeof body !== "object" || body === null) return c.json({ error: "Expected a JSON object" }, 400);
-
-    const dataset = parseDatasetId(body.datasetId);
-    if (!dataset.ok) return c.json({ error: dataset.error }, 400);
-    const name = parseName(body.name);
-    if (!name.ok) return c.json({ error: name.error }, 400);
-    const config = parseConfiguration(body.config);
-    if (!config.ok) return c.json({ error: config.error }, 400);
+  router.openapi(createConfigRoute, (c) => {
+    const { datasetId, name, config } = c.req.valid("json");
 
     const row = db
       .insert(configurations)
       .values({
         id: randomUUID(),
-        datasetId: dataset.value,
-        name: name.value,
+        datasetId,
+        name,
         ownerId: c.var.user!.id,
         visibility: "private",
-        config: config.value,
+        config,
       })
       .returning()
       .get();

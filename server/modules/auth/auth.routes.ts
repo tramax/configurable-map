@@ -1,32 +1,66 @@
+import { createRoute } from "@hono/zod-openapi";
 import { eq } from "drizzle-orm";
-import { Hono } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { SESSION_COOKIE, sessionCookieOptions } from "./cookie";
 import { hashPassword, verifyPassword } from "./password";
 import { createSession, deleteSession } from "./sessions";
 import type { Db } from "@shared/db/client";
 import { users } from "@shared/db/schema";
+import { COOKIE_AUTH, createRouter, errorResponse, requireJson } from "@shared/openapi";
 import { requireAuth } from "./auth.middleware";
-import type { AppEnv } from "@shared/types";
+import { loginBodySchema, userSchema } from "./auth.schemas";
 
 // Compared against when the username doesn't exist, so response time doesn't reveal valid usernames.
 const DUMMY_HASH = hashPassword("dummy-password");
 
+const meRoute = createRoute({
+  method: "get",
+  path: "/me",
+  tags: ["Auth"],
+  summary: "Get the signed-in user",
+  security: [{ [COOKIE_AUTH]: [] }],
+  middleware: [requireAuth] as const,
+  responses: {
+    200: { description: "The signed-in user", content: { "application/json": { schema: userSchema } } },
+    401: errorResponse("Not signed in"),
+  },
+});
+
+const loginRoute = createRoute({
+  method: "post",
+  path: "/login",
+  tags: ["Auth"],
+  summary: "Sign in",
+  description: "Sets the session cookie. Any session the browser already held is replaced.",
+  middleware: [requireJson] as const,
+  request: {
+    body: { required: true, content: { "application/json": { schema: loginBodySchema } } },
+  },
+  responses: {
+    200: { description: "Signed in", content: { "application/json": { schema: userSchema } } },
+    400: errorResponse("Username or password missing"),
+    401: errorResponse("Invalid username or password"),
+    415: errorResponse("Body is not JSON"),
+  },
+});
+
+const logoutRoute = createRoute({
+  method: "post",
+  path: "/logout",
+  tags: ["Auth"],
+  summary: "Sign out",
+  description: "Ends the session and clears the cookie. Succeeds even when not signed in.",
+  responses: { 204: { description: "Signed out" } },
+});
+
 export function authRoutes(db: Db, opts: { secureCookies: boolean }) {
   const cookieOptions = sessionCookieOptions(opts.secureCookies);
-  const router = new Hono<AppEnv>();
+  const router = createRouter();
 
-  router.get("/me", requireAuth, (c) => c.json(c.var.user));
+  router.openapi(meRoute, (c) => c.json(c.var.user!, 200));
 
-  router.post("/login", async (c) => {
-    // Requiring JSON means a cross-site HTML form can't trigger this request.
-    if (!c.req.header("content-type")?.includes("application/json")) {
-      return c.json({ error: "Expected JSON" }, 415);
-    }
-    const body = await c.req.json().catch(() => null);
-    const username = typeof body?.username === "string" ? body.username : "";
-    const password = typeof body?.password === "string" ? body.password : "";
-    if (!username || !password) return c.json({ error: "Username and password required" }, 400);
+  router.openapi(loginRoute, (c) => {
+    const { username, password } = c.req.valid("json");
 
     const row = db.select().from(users).where(eq(users.username, username)).get();
     const ok = verifyPassword(password, row?.passwordHash ?? DUMMY_HASH);
@@ -38,10 +72,10 @@ export function authRoutes(db: Db, opts: { secureCookies: boolean }) {
 
     const { token, expiresAt } = createSession(db, row.id);
     setCookie(c, SESSION_COOKIE, token, { ...cookieOptions, expires: expiresAt });
-    return c.json({ id: row.id, username: row.username });
+    return c.json({ id: row.id, username: row.username }, 200);
   });
 
-  router.post("/logout", (c) => {
+  router.openapi(logoutRoute, (c) => {
     const token = getCookie(c, SESSION_COOKIE);
     if (token) deleteSession(db, token);
     deleteCookie(c, SESSION_COOKIE, cookieOptions);

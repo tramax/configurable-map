@@ -69,14 +69,17 @@ Browser (React 19 + Vite)               Server (Hono on Node)             SQLite
 
 **Backend** (`server/`), organised by feature module
 
-- `app.ts` composes the app: the session middleware first, then one router per module under `/api`. Adding a feature means adding `server/modules/<feature>/` and mounting its routes there.
+- `app.ts` composes the app: the session middleware first, then one router per module under `/api`, then the generated API documentation. Adding a feature means adding `server/modules/<feature>/` and mounting its routes there.
 - `modules/auth/` handles sign-in, sessions and password hashing. Passwords are hashed with scrypt. A session is a random token in an HttpOnly, `SameSite=Lax` cookie (`Secure` in production); only the token's SHA-256 hash is stored, and sessions last 7 days.
-- `modules/configurations/` holds the configuration routes and `validate.ts`, which checks incoming configurations.
+- `modules/configurations/` holds the configuration routes and their request and response schemas.
+- `shared/openapi.ts` holds what every module uses to declare its routes: the router factory, the shared error response and the JSON-only guard.
 - `shared/db/` holds the drizzle schema, migrations, the client and the seed script.
 
 **Data model.** The `configurations` table stores the configuration as a JSON column next to its owner, dataset id, name and `visibility` (`system`, `private` or `public`). Check constraints keep the combinations consistent (for example, only system configurations have no owner, and only they can be the default). Today only `private` rows are created; the other values are in the schema for the improvements listed below.
 
-**Shared schema.** `src/configSchema.ts` is imported as a type only by the server, so the server never loads the ArcGIS SDK. At runtime the server validates with its own function, not the type.
+**Shared schema.** `src/configSchema.ts` defines a configuration once, as a [zod](https://zod.dev/) schema, and the `Configuration` type is derived from it. The server uses the schema to validate requests and to generate the API documentation. The frontend imports only the type, so zod is not part of the browser bundle, and the file has no ArcGIS imports, so the server never loads the SDK.
+
+**Generated API documentation.** Each route is declared with `createRoute` ([`@hono/zod-openapi`](https://github.com/honojs/middleware/tree/main/packages/zod-openapi)): its method, path, request schemas and the responses it can give. That one declaration validates the request, types the handler, and produces the OpenAPI document, so the docs cannot drift from the code.
 
 **Save and open flow.**
 
@@ -99,7 +102,7 @@ In a second terminal:
 > pnpm run dev           # web app on http://localhost:5173
 ```
 
-Open the URL Vite prints. `pnpm run dev` proxies `/api` to the API server on port 3001, so the session cookie stays same-origin.
+Open the URL Vite prints. The API documentation is at <http://localhost:3001/api/docs>. `pnpm run dev` proxies `/api` to the API server on port 3001, so the session cookie stays same-origin.
 
 Demo users: `alice` / `alice-demo`, `bob` / `bob-demo`, `carol` / `carol-demo`. Re-running the seed resets their passwords but keeps their saved configurations.
 
@@ -116,66 +119,37 @@ Environment variables (all optional): `PORT` (default `3001`), `DB_PATH` (defaul
 
 ## API documentation
 
-All endpoints are under `/api`, send and receive JSON, and report errors as `{ "error": "<message>" }`. Authentication is by the `session` cookie set at login; there is no token to handle in the client. Requests with a body must send `Content-Type: application/json`, otherwise the server answers `415`.
+The API documentation is generated from the code, so it is always current. With the API server running (`pnpm run dev:server`):
 
-### Auth
+- **Swagger UI:** <http://localhost:3001/api/docs>. Browse the endpoints and schemas, and try requests. Call `POST /api/auth/login` first; the browser then keeps the session cookie and the other requests are sent with it. (The Authorize button is not needed, because browsers do not let a page set a cookie by hand.)
+- **OpenAPI document:** <http://localhost:3001/api/openapi.json>, for generating a client or importing into Postman.
 
-| Method and path | Body | Success | Errors |
-| --- | --- | --- | --- |
-| `GET /api/auth/me` | | `200` `{ id, username }` | `401` not signed in |
-| `POST /api/auth/login` | `{ username, password }` | `200` `{ id, username }`, sets the cookie | `400` missing field, `401` wrong credentials, `415` not JSON |
-| `POST /api/auth/logout` | | `204`, clears the cookie | |
+At a glance (the generated documentation has the full schemas and every response):
 
-### Configurations
+| Endpoint | Purpose | Needs sign-in |
+| --- | --- | --- |
+| `GET /api/auth/me` | The signed-in user. | yes |
+| `POST /api/auth/login` | Sign in with `{ username, password }`; sets the session cookie. | no |
+| `POST /api/auth/logout` | Sign out; clears the cookie. | no |
+| `GET /api/configurations?datasetId=` | The configurations of a dataset that the user may open, newest first. | yes |
+| `POST /api/configurations` | Save a new private configuration `{ datasetId, name, config }`. | yes |
 
-All configuration endpoints require a session (`401` otherwise).
+Conventions that hold for every endpoint: JSON in and out; errors are `{ "error": "<message>" }`, where a request that fails validation gets `400` and a message naming the first problem (for example `config.symbolConfig.color.stops.0.color: Expected a #rrggbb color`); a body that is not JSON gets `415`; no session gets `401`.
 
-**`GET /api/configurations?datasetId=<id>`** lists the configurations of a dataset that the user may open: system and published ones, and their own. Newest first. `400` if `datasetId` is missing.
+### Adding an endpoint
 
-```json
-[
-  {
-    "id": "64f71eac-a087-499b-988d-cdc7162ea9b7",
-    "datasetId": "landscape-trees",
-    "name": "Tall trees",
-    "visibility": "private",
-    "isDefault": false,
-    "createdAt": "2026-11-23T02:33:50.529Z",
-    "config": { "symbolConfig": { }, "tableConfig": { } }
-  }
-]
-```
+1. Put it in the feature's module (`server/modules/<feature>/`), or create one and mount it in `app.ts`.
+2. Describe the request and response bodies as zod schemas (import `z` from `@hono/zod-openapi`, and give reusable ones a name with `.openapi("Name")`).
+3. Declare the route with `createRoute`, listing every response it can return. Add `security: [{ [COOKIE_AUTH]: [] }]` if it needs a session, and `middleware: [requireJson]` if it takes a body.
+4. Register it on a router from `createRouter()` with `router.openapi(route, handler)`. The handler gets typed, already-validated input from `c.req.valid(...)`, and TypeScript checks that it only returns responses the route declares.
 
-**`POST /api/configurations`** saves a new private configuration for the signed-in user and returns it with `201`. `400` carries the reason the body was rejected.
-
-```json
-{
-  "datasetId": "landscape-trees",
-  "name": "Tall trees",
-  "config": {
-    "symbolConfig": {
-      "color": { "field": "Height", "stops": [
-        { "value": 0, "color": "#ff0000" }, { "value": 100, "color": "#0000ff" } ] },
-      "size":  { "field": "Height", "stops": [
-        { "value": 0, "size": 8 }, { "value": 100, "size": 30 } ] }
-    },
-    "tableConfig": { "columns": ["Height", "Leaf_Area", "Sci_Name"] }
-  }
-}
-```
-
-Validation rules (`server/modules/configurations/validate.ts`):
-
-- `name`: 1 to 100 characters after trimming. `datasetId`: 1 to 100 characters.
-- `symbolConfig.color` and `symbolConfig.size` are each optional. When present: a `field` name and 2 to 20 stops. Each stop has a finite `value`, plus a `#rrggbb` `color` or a `size` above 0.
-- `tableConfig.columns`: 1 to 500 unique, non-empty field names.
-- Unknown keys are dropped, not stored.
+It then appears in Swagger UI with no further documentation work.
 
 ## Assumptions and trade-offs
 
 - **A configuration is only symbology and table columns.** That is what was asked for. Basemap, map extent, sorting, filters and column widths are not captured.
 - **Server-side validation checks shape, not meaning.** The server does not know the layer's fields, so it cannot tell whether a saved field exists. The client copes with that when it opens one: unknown table columns are skipped. A saved symbology field that no longer exists is not handled the same way, so the symbology panel and renderer would still reference it.
-- **Hand-written validator instead of a schema library.** The configuration is small, and this avoided a new dependency. The cost is that `configSchema.ts` and `validate.ts` must be kept in step by hand.
+- **zod and OpenAPI generation instead of hand-written validation and docs.** More endpoints are planned, and a hand-written spec drifts from the code. Declaring each route once gives validation, types and documentation from the same place. The cost is three dependencies (`zod`, `@hono/zod-openapi`, `@hono/swagger-ui`) and a stricter way of writing routes.
 - **Evenly spaced stops.** Users pick colors and sizes, and the stop values are derived from the field's range. This makes editing simple and hard to get wrong. Users cannot place a stop at a chosen value. Size is limited to two stops.
 - **Numeric fields only for symbology.** A continuous ramp only makes sense for numbers. The table can show any field.
 - **SQLite and server-side sessions.** Easy to run locally with no external services, and sessions can be revoked. This ties the API to a single node. Cookie sessions fit a same-origin app; `SameSite=Lax` plus the JSON-only content type protect state-changing requests from cross-site forms, without a separate CSRF token.
@@ -193,6 +167,7 @@ Validation rules (`server/modules/configurations/validate.ts`):
 - Table column state is read from the live table when saving. Only visible columns and their order are saved, so column widths and sort order are not.
 - There are no automated tests. The feature was checked by hand and with a throwaway browser script (see AI usage disclosure), neither of which is in the repository.
 - `pnpm run build` produces a static build, but the API server does not serve it, so there is no single-process production deployment. The two have to be hosted together behind a proxy.
+- The API documentation is served to everyone, signed in or not, and Swagger UI loads its scripts and styles from a public CDN, so it needs internet access. It is meant for development; in production it would be turned off or put behind sign-in.
 - No rate limiting or lockout on sign-in, and sessions are not listed or revoked on password change.
 - The legend and the symbology panel assume a point layer with numeric fields.
 - While a symbology edit is invalid (for example an empty size), the panel shows an error and the map keeps the last valid symbology. Saving at that moment saves that last valid symbology, not the half-finished edit.
@@ -203,13 +178,13 @@ Validation rules (`server/modules/configurations/validate.ts`):
 - A system default configuration per dataset, opened on load, and an option to publish a private configuration (`visibility` and `publishedAt` are already in the schema).
 - Save more of the view: sort order, column widths, filters, basemap and extent.
 - Validate saved fields against the layer when opening, and tell the user which parts could not be applied.
-- Automated tests: unit tests for `validate.ts` and the stop and draft helpers, API tests against an in-memory database (`createDb(":memory:")` already supports this), and a browser test for the save and open flow.
-- Share one validation definition between client and server (for example a schema library that also gives the types), so they cannot drift.
+- Automated tests: unit tests for the configuration schema and the stop and draft helpers, API tests against an in-memory database (`createDb(":memory:")` already supports this), and a browser test for the save and open flow.
+- Generate a typed API client for the frontend from the OpenAPI document, replacing the hand-written `fetch` calls in `src/auth/api.ts` and `src/configurations/api.ts`.
 - Serve the built frontend from the API server, add a container image, and move to a managed database if more than one server is needed.
 - Sign-in hardening: rate limiting, and invalidating other sessions on password change.
 
 ## AI usage disclosure
 
-AI coding assistants were used on this project. This section describes the **saved configurations feature**: the backend module (`server/modules/configurations/`), the client (`src/configurations/`), the supporting changes in `App.tsx`, `LoginMenu.tsx` and `configuration.ts`, and this README were written by Claude Code (Claude Sonnet 5.5) from the task description, working in the existing codebase. It was checked by typechecking both the client and the server, by calling the API directly (unauthenticated, cross-user visibility, invalid names, colors, sizes and duplicate columns, and a non-JSON body), and by driving the real app in a headless browser: save, reload, reopen, and switching between configurations. The throwaway scripts used for that were kept outside the repository.
+AI coding assistants were used on this project. This section describes the **saved configurations feature**: the backend module (`server/modules/configurations/`), the client (`src/configurations/`), the supporting changes in `App.tsx`, `LoginMenu.tsx` and `configuration.ts`, the move of the auth and configuration routes to generated OpenAPI documentation (`server/shared/openapi.ts`, the route and schema files, `src/configSchema.ts`), and this README were written by Claude Code (Claude Sonnet 5.5) from the task description, working in the existing codebase. It was checked by typechecking both the client and the server, by calling the API directly (unauthenticated, cross-user visibility, invalid names, colors, sizes and duplicate columns, a non-JSON body and malformed JSON, again after the move to generated documentation), by driving the real app in a headless browser (save, reload, reopen, and switching between configurations; that run was made before the documentation change), and by loading the generated Swagger UI in a headless browser. The throwaway scripts used for that were kept outside the repository.
 
 AI output is a draft, not a source of truth: the code and the behavior described here should be reviewed like any other contribution.

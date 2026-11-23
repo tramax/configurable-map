@@ -2,3 +2,4 @@
 export { authRoutes } from "./auth.routes";
 export { loadSession, requireAuth } from "./auth.middleware";
 export { hashPassword } from "./password";
+export { SESSION_COOKIE } from "./cookie";
