@@ -132,8 +132,10 @@
 
 .symbology__dot {
   flex: none;
+  box-sizing: border-box;
+  border: 1px solid #6e6e6e; /* same look as the size ramp in the map legend */
   border-radius: 50%;
-  background: #6a6a6a;
+  background: #fff;
 }
 
 .symbology__stops {
