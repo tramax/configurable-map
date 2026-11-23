@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { authRoutes, loadSession } from "@modules/auth";
+import { configurationRoutes } from "@modules/configurations";
 import type { Db } from "@shared/db/client";
 import type { AppEnv } from "@shared/types";
 
@@ -14,6 +15,7 @@ export function createApp(db: Db, opts: { secureCookies?: boolean } = {}) {
   app.use("/api/*", loadSession(db));
 
   app.route("/api/auth", authRoutes(db, { secureCookies }));
+  app.route("/api/configurations", configurationRoutes(db));
 
   app.onError((err, c) => {
     console.error(err);

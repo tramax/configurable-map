@@ -54,24 +54,43 @@ export const applySymbology = (
   layer.renderer = renderer;
 };
 
+/**
+ * Applies only the table part of a configuration. The configured columns come first, in config
+ * order, and are visible; every other selectable field gets a hidden column so the table's own
+ * column menu can still reveal it. Columns naming a field the layer no longer has are skipped.
+ */
+export const applyTableConfig = (
+  layer: FeatureLayer,
+  table: HTMLArcgisFeatureTableElement,
+  tableConfig: Configuration["tableConfig"],
+) => {
+  const available = getTableFieldNames(layer);
+  const columns = tableConfig.columns.filter((name) => available.includes(name));
+  const shown = new Set(columns);
+  const hiddenColumns = available.filter((name) => !shown.has(name));
+  table.tableTemplate = new TableTemplate({
+    columnTemplates: [
+      ...columns.map((fieldName) => new FieldColumnTemplate({ fieldName, visible: true })),
+      ...hiddenColumns.map((fieldName) => new FieldColumnTemplate({ fieldName, visible: false })),
+    ],
+  });
+  table.hiddenFields = new Collection<string>();
+};
+
+/** The fields the table currently shows, left to right - including edits made in its column menu. */
+export const getTableColumns = (
+  layer: FeatureLayer,
+  table: HTMLArcgisFeatureTableElement,
+): string[] => {
+  const available = new Set(getTableFieldNames(layer));
+  return table.visibleColumns.map((c) => c.fieldName).filter((name) => available.has(name));
+};
+
 export const configure = (
   layer: FeatureLayer,
   table: HTMLArcgisFeatureTableElement,
   config: Configuration,
 ) => {
-  const { symbolConfig, tableConfig } = config;
-
-  applySymbology(layer, symbolConfig);
-
-  // Every selectable field gets a column template so the table's own column menu can show it. The
-  // configured columns come first, in config order, and are visible; the rest start hidden.
-  const configured = new Set(tableConfig.columns);
-  const hiddenColumns = getTableFieldNames(layer).filter((name) => !configured.has(name));
-  table.tableTemplate = new TableTemplate({
-    columnTemplates: [
-      ...tableConfig.columns.map((fieldName) => new FieldColumnTemplate({ fieldName, visible: true })),
-      ...hiddenColumns.map((fieldName) => new FieldColumnTemplate({ fieldName, visible: false })),
-    ],
-  });
-  table.hiddenFields = new Collection<string>();
+  applySymbology(layer, config.symbolConfig);
+  applyTableConfig(layer, table, config.tableConfig);
 };

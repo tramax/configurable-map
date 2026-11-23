@@ -1,0 +1,29 @@
+.configurations {
+  position: fixed;
+  top: 12px;
+  right: 108px; /* left of the symbology button, which is left of the account button */
+  z-index: 1000; /* above the map and its widgets */
+}
+
+.configurations__panel {
+  box-sizing: border-box;
+  width: 320px;
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.configurations__title {
+  margin: 0;
+  font-size: var(--calcite-font-size-1);
+  font-weight: var(--calcite-font-weight-medium);
+}
+
+.configurations__save {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}

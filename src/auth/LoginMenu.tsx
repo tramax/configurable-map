@@ -3,15 +3,20 @@ import "@esri/calcite-components/components/calcite-button";
 import "@esri/calcite-components/components/calcite-input";
 import "@esri/calcite-components/components/calcite-notice";
 import "@esri/calcite-components/components/calcite-popover";
-import { AuthUser, fetchCurrentUser, login, logout } from "./api";
+import { AuthUser, login, logout } from "./api";
 import "./LoginMenu.css";
+
+export interface LoginMenuProps {
+  /** The signed-in user, or null. Owned by the parent so other features can react to it. */
+  user: AuthUser | null;
+  onUserChange: (user: AuthUser | null) => void;
+}
 
 /**
  * Fixed top-right account button. Opens a popover with a sign-in form,
  * or the current user and a sign-out button when logged in.
  */
-export default function LoginMenu() {
-  const [user, setUser] = useState<AuthUser | null>(null);
+export default function LoginMenu({ user, onUserChange }: LoginMenuProps) {
   const [open, setOpen] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -20,17 +25,6 @@ export default function LoginMenu() {
   // The popover anchors to (and is toggled by) this button; kept in state so the popover re-renders once it exists.
   const [button, setButton] = useState<HTMLElement | null>(null);
   const usernameRef = useRef<HTMLCalciteInputElement>(null);
-
-  // Restore an existing session on load.
-  useEffect(() => {
-    let cancelled = false;
-    fetchCurrentUser().then((u) => {
-      if (!cancelled) setUser(u);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   useEffect(() => {
     if (open && !user) void usernameRef.current?.setFocus();
@@ -42,7 +36,7 @@ export default function LoginMenu() {
     setBusy(true);
     setError(null);
     try {
-      setUser(await login(username.trim(), password));
+      onUserChange(await login(username.trim(), password));
       setUsername("");
       setPassword("");
       setOpen(false);
@@ -55,7 +49,7 @@ export default function LoginMenu() {
 
   async function handleLogout() {
     await logout();
-    setUser(null);
+    onUserChange(null);
     setOpen(false);
   }
 

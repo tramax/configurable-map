@@ -6,13 +6,19 @@ import "@arcgis/map-components/components/arcgis-feature-table";
 import "@arcgis/map-components/components/arcgis-expand";
 import type { ArcgisMapCustomEvent } from "@arcgis/map-components";
 import type { ArcgisFeatureTable } from "@arcgis/map-components/components/arcgis-feature-table";
-import { applySymbology, Configuration, configure } from "./configuration";
+import { applySymbology, applyTableConfig, Configuration, configure, getTableColumns } from "./configuration";
+import { AuthUser, fetchCurrentUser } from "./auth/api";
 import LoginMenu from "./auth/LoginMenu";
+import ConfigurationsMenu from "./configurations/ConfigurationsMenu";
+import type { SavedConfiguration } from "./configurations/api";
 import SymbologyPanel from "./symbology/SymbologyPanel";
 
 // This is a REST API - you can open this url on the browser to see the available fields in the layer
 const FEATURE_LAYER_URL =
   "https://services.arcgis.com/V6ZHFr6zdgNZuVG0/arcgis/rest/services/Landscape_Trees/FeatureServer/0";
+
+// Saved configurations are stored per dataset.
+const DATASET_ID = "landscape-trees";
 
 // SAMPLE CONFIG
 const CONFIG: Configuration = {
@@ -27,8 +33,23 @@ const CONFIG: Configuration = {
 
 export default function App() {
   const [layer, setLayer] = useState<FeatureLayer | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [symbolConfig, setSymbolConfig] = useState(CONFIG.symbolConfig);
+  // What the symbology panel starts from. It keeps its own draft, so opening a saved configuration
+  // hands it a new `initial` and a new `version`, which remounts it.
+  const [panelStart, setPanelStart] = useState({ initial: CONFIG.symbolConfig, version: 0 });
   const tableRef = useRef<ArcgisFeatureTable | null>(null);
+
+  // Restore an existing session on load.
+  useEffect(() => {
+    let cancelled = false;
+    fetchCurrentUser().then((u) => {
+      if (!cancelled) setUser(u);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Table + initial symbology, once the layer (and with it the table) exists.
   useEffect(() => {
@@ -39,6 +60,27 @@ export default function App() {
   useEffect(() => {
     if (layer) applySymbology(layer, symbolConfig);
   }, [layer, symbolConfig]);
+
+  /** The configuration on screen: the symbology as edited, and the table columns as currently shown. */
+  const getCurrentConfig = useCallback((): Configuration => {
+    const table = tableRef.current;
+    return {
+      symbolConfig,
+      tableConfig: {
+        columns: layer && table ? getTableColumns(layer, table) : CONFIG.tableConfig.columns,
+      },
+    };
+  }, [layer, symbolConfig]);
+
+  const openConfiguration = useCallback(
+    ({ config }: SavedConfiguration) => {
+      if (!layer || !tableRef.current) return;
+      applyTableConfig(layer, tableRef.current, config.tableConfig);
+      setSymbolConfig(config.symbolConfig);
+      setPanelStart((p) => ({ initial: config.symbolConfig, version: p.version + 1 }));
+    },
+    [layer],
+  );
 
   const handleReady = useCallback((event: ArcgisMapCustomEvent<void>) => {
     const view = event.target.view;
@@ -81,13 +123,22 @@ export default function App() {
       }}
     >
       {layer && (
+        <ConfigurationsMenu
+          user={user}
+          datasetId={DATASET_ID}
+          getCurrent={getCurrentConfig}
+          onOpen={openConfiguration}
+        />
+      )}
+      {layer && (
         <SymbologyPanel
+          key={panelStart.version}
           layer={layer}
-          initialConfig={CONFIG.symbolConfig}
+          initialConfig={panelStart.initial}
           onChange={setSymbolConfig}
         />
       )}
-      <LoginMenu />
+      <LoginMenu user={user} onUserChange={setUser} />
       <arcgis-map
         id="map"
         basemap="topo-vector"
