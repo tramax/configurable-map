@@ -11,7 +11,6 @@ import "@esri/calcite-components/components/calcite-popover";
 import "@esri/calcite-components/components/calcite-select";
 import "@esri/calcite-components/components/calcite-switch";
 import type { ColorStop, Configuration, SizeStop } from "../configSchema";
-// @ts-ignore: the CSS side-effect import is handled by the application bundler
 import "./SymbologyPanel.css";
 
 type SymbolConfig = Configuration["symbolConfig"];
