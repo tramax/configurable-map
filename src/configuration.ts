@@ -83,7 +83,7 @@ export const getTableColumns = (
   table: HTMLArcgisFeatureTableElement,
 ): string[] => {
   const available = new Set(getTableFieldNames(layer));
-  return table.visibleColumns.map((c) => c.fieldName).filter((name) => available.has(name));
+  return table.visibleColumns.map((column) => column.fieldName).filter((name) => available.has(name));
 };
 
 export const configure = (

@@ -20,11 +20,11 @@ export const COOKIE_AUTH = "cookieAuth";
  */
 export const createRouter = () =>
   new OpenAPIHono<AppEnv>({
-    defaultHook: (result, c) => {
+    defaultHook: (result, context) => {
       if (result.success) return;
       const issue = result.error.issues[0];
       const where = issue.path.join(".");
-      return c.json({ error: where ? `${where}: ${issue.message}` : issue.message }, 400);
+      return context.json({ error: where ? `${where}: ${issue.message}` : issue.message }, 400);
     },
   });
 
@@ -32,9 +32,9 @@ export const createRouter = () =>
  * Rejects a request whose body isn't JSON with 415. Put it on every route with a body: a
  * cross-site HTML form can't send JSON, so this keeps such a form from triggering the route.
  */
-export const requireJson = createMiddleware<AppEnv>(async (c, next) => {
-  if (!c.req.header("content-type")?.includes("application/json")) {
-    return c.json({ error: "Expected JSON" }, 415);
+export const requireJson = createMiddleware<AppEnv>(async (context, next) => {
+  if (!context.req.header("content-type")?.includes("application/json")) {
+    return context.json({ error: "Expected JSON" }, 415);
   }
   await next();
 });

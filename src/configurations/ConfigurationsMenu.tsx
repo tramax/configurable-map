@@ -25,10 +25,10 @@ export interface ConfigurationsMenuProps {
 const MAX_NAME_LENGTH = 100;
 
 /** The list is shown in these sections, in this order; every configuration falls in exactly one. */
-const GROUPS: Array<{ title: string; include: (c: SavedConfiguration) => boolean }> = [
-  { title: "My configurations", include: (c) => c.mine },
-  { title: "Shared by others", include: (c) => !c.mine && c.visibility === "public" },
-  { title: "Predefined", include: (c) => c.visibility === "system" },
+const GROUPS: Array<{ title: string; include: (configuration: SavedConfiguration) => boolean }> = [
+  { title: "My configurations", include: (configuration) => configuration.mine },
+  { title: "Shared by others", include: (configuration) => !configuration.mine && configuration.visibility === "public" },
+  { title: "Predefined", include: (configuration) => configuration.visibility === "system" },
 ];
 
 function describe(item: SavedConfiguration): string {

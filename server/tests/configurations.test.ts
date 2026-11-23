@@ -86,7 +86,7 @@ describe("saving a configuration", () => {
       publishedAt: null,
     });
 
-    const mine = (await list(alice)).find((c) => c.id === saved.id);
+    const mine = (await list(alice)).find((configuration) => configuration.id === saved.id);
     expect(mine?.name).toBe("Tall trees");
   });
 
@@ -117,7 +117,7 @@ describe("sharing", () => {
     const bob = await login("bob");
     const saved = await save(alice, "Secret");
 
-    expect((await list(bob)).some((c) => c.id === saved.id)).toBe(false);
+    expect((await list(bob)).some((configuration) => configuration.id === saved.id)).toBe(false);
   });
 
   it("shows a published configuration to others, with its author, until it is unpublished", async () => {
@@ -130,15 +130,15 @@ describe("sharing", () => {
     expect(published.status).toBe(200);
     expect(((await published.json()) as Saved).visibility).toBe("public");
 
-    const seenByBob = (await list(bob)).find((c) => c.id === saved.id);
+    const seenByBob = (await list(bob)).find((configuration) => configuration.id === saved.id);
     expect(seenByBob).toMatchObject({ author: "alice", mine: false, visibility: "public" });
     expect(seenByBob?.publishedAt).not.toBeNull();
 
     const unpublished = await alice.post(`/api/configurations/${saved.id}/unpublish`);
     expect(unpublished.status).toBe(200);
     expect(((await unpublished.json()) as Saved).publishedAt).toBeNull();
-    expect((await list(bob)).some((c) => c.id === saved.id)).toBe(false);
-    expect((await list(alice)).some((c) => c.id === saved.id)).toBe(true);
+    expect((await list(bob)).some((configuration) => configuration.id === saved.id)).toBe(false);
+    expect((await list(alice)).some((configuration) => configuration.id === saved.id)).toBe(true);
   });
 
   it("keeps the original publish date when publishing twice", async () => {
@@ -159,7 +159,7 @@ describe("sharing", () => {
 
     expect((await bob.post(`/api/configurations/${saved.id}/publish`)).status).toBe(404);
     expect((await bob.post(`/api/configurations/${saved.id}/unpublish`)).status).toBe(404);
-    expect((await list(alice)).find((c) => c.id === saved.id)?.visibility).toBe("private");
+    expect((await list(alice)).find((configuration) => configuration.id === saved.id)?.visibility).toBe("private");
   });
 
   it("answers 404 for an id that does not exist, and for the system default", async () => {
@@ -172,7 +172,7 @@ describe("sharing", () => {
   it("lists the system default for every signed-in user", async () => {
     const { login } = createTestApp();
     const bob = await login("bob");
-    const defaults = (await list(bob)).filter((c) => c.visibility === "system");
+    const defaults = (await list(bob)).filter((configuration) => configuration.visibility === "system");
     expect(defaults).toHaveLength(1);
   });
 });

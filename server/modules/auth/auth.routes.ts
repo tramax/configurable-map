@@ -57,29 +57,29 @@ export function authRoutes(db: Db, opts: { secureCookies: boolean }) {
   const cookieOptions = sessionCookieOptions(opts.secureCookies);
   const router = createRouter();
 
-  router.openapi(meRoute, (c) => c.json(c.var.user!, 200));
+  router.openapi(meRoute, (context) => context.json(context.var.user!, 200));
 
-  router.openapi(loginRoute, (c) => {
-    const { username, password } = c.req.valid("json");
+  router.openapi(loginRoute, (context) => {
+    const { username, password } = context.req.valid("json");
 
     const row = db.select().from(users).where(eq(users.username, username)).get();
     const ok = verifyPassword(password, row?.passwordHash ?? DUMMY_HASH);
-    if (!row || !ok) return c.json({ error: "Invalid username or password" }, 401);
+    if (!row || !ok) return context.json({ error: "Invalid username or password" }, 401);
 
     // Drop any session the browser was already holding so tokens don't accumulate or get reused.
-    const previous = getCookie(c, SESSION_COOKIE);
+    const previous = getCookie(context, SESSION_COOKIE);
     if (previous) deleteSession(db, previous);
 
     const { token, expiresAt } = createSession(db, row.id);
-    setCookie(c, SESSION_COOKIE, token, { ...cookieOptions, expires: expiresAt });
-    return c.json({ id: row.id, username: row.username }, 200);
+    setCookie(context, SESSION_COOKIE, token, { ...cookieOptions, expires: expiresAt });
+    return context.json({ id: row.id, username: row.username }, 200);
   });
 
-  router.openapi(logoutRoute, (c) => {
-    const token = getCookie(c, SESSION_COOKIE);
+  router.openapi(logoutRoute, (context) => {
+    const token = getCookie(context, SESSION_COOKIE);
     if (token) deleteSession(db, token);
-    deleteCookie(c, SESSION_COOKIE, cookieOptions);
-    return c.body(null, 204);
+    deleteCookie(context, SESSION_COOKIE, cookieOptions);
+    return context.body(null, 204);
   });
 
   return router;

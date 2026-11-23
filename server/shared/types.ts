@@ -3,7 +3,7 @@ export interface AuthUser {
   username: string;
 }
 
-/** Hono environment shared by every router: what middleware puts on `c.var`. */
+/** Hono environment shared by every router: what middleware puts on `context.var`. */
 export type AppEnv = {
   Variables: {
     /** Set by the session middleware; null when the request has no valid session. */

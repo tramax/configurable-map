@@ -149,30 +149,30 @@ export function configurationRoutes(db: Db) {
   // Public. Registered before requireAuth on purpose: the app asks for it on first load, before
   // anyone has signed in. Everything registered after the requireAuth line below needs a session,
   // so a route added later is protected unless it is deliberately put above it.
-  router.openapi(defaultRoute, (c) => {
-    const { datasetId } = c.req.valid("query");
+  router.openapi(defaultRoute, (context) => {
+    const { datasetId } = context.req.valid("query");
     // The schema allows at most one default per dataset, and only system rows can be one.
     const row = db
       .select()
       .from(configurations)
       .where(and(eq(configurations.datasetId, datasetId), eq(configurations.isDefault, true)))
       .get();
-    if (!row) return c.json({ error: "No default configuration for this dataset" }, 404);
+    if (!row) return context.json({ error: "No default configuration for this dataset" }, 404);
 
     // The database stores the configuration as unchecked JSON, and a seeded or hand-edited row
     // never went through the API's validation. Check it here so the client can trust what it gets.
     if (!configSchema.safeParse(row.config).success) {
       console.error(`The default configuration of "${datasetId}" is not a valid configuration`);
-      return c.json({ error: "The default configuration is invalid" }, 500);
+      return context.json({ error: "The default configuration is invalid" }, 500);
     }
-    return c.json(toDto(row, null, null), 200);
+    return context.json(toDto(row, null, null), 200);
   });
 
   router.use("*", requireAuth);
 
-  router.openapi(listRoute, (c) => {
-    const { datasetId } = c.req.valid("query");
-    const user = c.var.user!;
+  router.openapi(listRoute, (context) => {
+    const { datasetId } = context.req.valid("query");
+    const user = context.var.user!;
 
     const rows = db
       .select({ row: configurations, author: users.username })
@@ -190,11 +190,11 @@ export function configurationRoutes(db: Db) {
       )
       .orderBy(desc(configurations.createdAt))
       .all();
-    return c.json(rows.map(({ row, author }) => toDto(row, author, user.id)), 200);
+    return context.json(rows.map(({ row, author }) => toDto(row, author, user.id)), 200);
   });
 
-  router.openapi(createConfigRoute, (c) => {
-    const { datasetId, name, config } = c.req.valid("json");
+  router.openapi(createConfigRoute, (context) => {
+    const { datasetId, name, config } = context.req.valid("json");
 
     const row = db
       .insert(configurations)
@@ -202,13 +202,13 @@ export function configurationRoutes(db: Db) {
         id: randomUUID(),
         datasetId,
         name,
-        ownerId: c.var.user!.id,
+        ownerId: context.var.user!.id,
         visibility: "private",
         config,
       })
       .returning()
       .get();
-    return c.json(toDto(row, c.var.user!.username, c.var.user!.id), 201);
+    return context.json(toDto(row, context.var.user!.username, context.var.user!.id), 201);
   });
 
   // Publishing is a state change on the owner's own row. The ownership check is part of the UPDATE,
@@ -226,20 +226,20 @@ export function configurationRoutes(db: Db) {
       .returning()
       .get();
 
-  router.openapi(publishRoute, (c) => {
-    const { id } = c.req.valid("param");
-    const user = c.var.user!;
+  router.openapi(publishRoute, (context) => {
+    const { id } = context.req.valid("param");
+    const user = context.var.user!;
     const row = setPublished(id, user.id, true);
-    if (!row) return c.json({ error: "Configuration not found" }, 404);
-    return c.json(toDto(row, user.username, user.id), 200);
+    if (!row) return context.json({ error: "Configuration not found" }, 404);
+    return context.json(toDto(row, user.username, user.id), 200);
   });
 
-  router.openapi(unpublishRoute, (c) => {
-    const { id } = c.req.valid("param");
-    const user = c.var.user!;
+  router.openapi(unpublishRoute, (context) => {
+    const { id } = context.req.valid("param");
+    const user = context.var.user!;
     const row = setPublished(id, user.id, false);
-    if (!row) return c.json({ error: "Configuration not found" }, 404);
-    return c.json(toDto(row, user.username, user.id), 200);
+    if (!row) return context.json({ error: "Configuration not found" }, 404);
+    return context.json(toDto(row, user.username, user.id), 200);
   });
 
   return router;

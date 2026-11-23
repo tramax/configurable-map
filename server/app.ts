@@ -35,11 +35,11 @@ export function createApp(db: Db, opts: { secureCookies?: boolean } = {}) {
   });
   app.get("/api/docs", swaggerUI({ url: "/api/openapi.json" }));
 
-  app.onError((err, c) => {
+  app.onError((err, context) => {
     // Errors raised on purpose with a status, such as malformed JSON (400), keep that status.
-    if (err instanceof HTTPException) return c.json({ error: err.message }, err.status);
+    if (err instanceof HTTPException) return context.json({ error: err.message }, err.status);
     console.error(err);
-    return c.json({ error: "Internal server error" }, 500);
+    return context.json({ error: "Internal server error" }, 500);
   });
 
   return app;
