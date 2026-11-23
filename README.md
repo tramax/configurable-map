@@ -28,6 +28,8 @@ The map is rendered using the [ArcGIS Maps SDK for Javascript](https://developer
 
 **Legend** (`configuration.ts`): the starter rendered the points with a `UniqueValueRenderer` that had no unique values. Its legend showed a meaningless "others" entry and never showed the size ramp, so it did not say which field drives color and which drives size. The renderer is now a `SimpleRenderer`, and each visual variable has a `legendOptions.title` (`Color: <field>` / `Size: <field>`), so the legend shows both ramps and what each represents. The visual variables themselves are unchanged.
 
+**Attribute table columns** (`configuration.ts`, `fields.ts`): the starter built one `FieldColumnTemplate` per entry in `tableConfig.columns`, so the table's column menu could only ever offer those columns. `configure` now also adds a hidden column for every other field of the layer (`getTableFieldNames` in `fields.ts`: all fields except system fields such as object id and global id, and editor-tracking fields). The columns shown on load and their order are unchanged: `tableConfig.columns` is still the initial visible set, in order. The difference is that users can now reveal the other fields from the table's own column menu, and reorder or hide columns there.
+
 Two small supporting edits to the starter files, needed so the symbology can be edited live:
 
 - `configuration.ts`: `applySymbology(layer, symbolConfig)` was split out of `configure`, which still does both and keeps its signature.

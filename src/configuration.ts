@@ -8,6 +8,7 @@ import FieldColumnTemplate from "@arcgis/core/widgets/FeatureTable/support/Field
 import TableTemplate from "@arcgis/core/widgets/FeatureTable/support/TableTemplate";
 
 import type { Configuration } from "./configSchema";
+import { getTableFieldNames } from "./fields";
 
 // The schema lives in configSchema.ts so the backend can share it; re-exported for existing imports.
 export type { Configuration, SizeStop, ColorStop } from "./configSchema";
@@ -62,10 +63,15 @@ export const configure = (
 
   applySymbology(layer, symbolConfig);
 
+  // Every selectable field gets a column template so the table's own column menu can show it. The
+  // configured columns come first, in config order, and are visible; the rest start hidden.
+  const configured = new Set(tableConfig.columns);
+  const hiddenColumns = getTableFieldNames(layer).filter((name) => !configured.has(name));
   table.tableTemplate = new TableTemplate({
-    columnTemplates: tableConfig.columns.map(
-      (fieldName) => new FieldColumnTemplate({ fieldName, visible: true }),
-    ),
+    columnTemplates: [
+      ...tableConfig.columns.map((fieldName) => new FieldColumnTemplate({ fieldName, visible: true })),
+      ...hiddenColumns.map((fieldName) => new FieldColumnTemplate({ fieldName, visible: false })),
+    ],
   });
   table.hiddenFields = new Collection<string>();
 };
