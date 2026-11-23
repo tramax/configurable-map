@@ -44,6 +44,8 @@ pnpm run dev           # in a second terminal: web app on http://localhost:5173
 
 Demo users: `alice` / `alice-demo`, `bob` / `bob-demo`, `carol` / `carol-demo`. Without the seed there is no default, and the app opens with plain symbology.
 
+Tests (backend only, no server or seed needed): `pnpm test`.
+
 ## API documentation
 
 Generated from the code. With the API running: **Swagger UI** at <http://localhost:3001/api/docs> (call `POST /api/auth/login` first; the browser keeps the cookie) and the **OpenAPI JSON** at <http://localhost:3001/api/openapi.json>.
@@ -75,7 +77,7 @@ Errors are `{ "error": "<message>" }`: `400` invalid input, `401` not signed in,
 - Saved configurations cannot be renamed, updated or deleted; the shared list has no search or pagination.
 - The default can only be changed in the database or the seed (no admin UI).
 - Column widths and sort order are not saved.
-- No automated tests; the feature was checked by hand and with throwaway scripts that are not in the repo.
+- Automated tests cover the configuration schema and the API only. The frontend (map, table, panels) has no automated tests and was checked by hand.
 - The API does not serve the built frontend, so there is no single-process production deployment. Swagger UI loads from a CDN and is open to everyone.
 - No rate limiting on sign-in.
 - In development, React strict mode requests the default twice.
@@ -86,7 +88,7 @@ Errors are `{ "error": "<message>" }`: `400` invalid input, `401` not signed in,
 - Finer sharing (named users, groups, links) and a way to manage predefined configurations.
 - Open the user's last configuration on load; save more of the view (sort, widths, filters, basemap, extent).
 - Check saved fields against the layer when opening and tell the user what could not be applied.
-- Automated tests: schema and helper unit tests, API tests on an in-memory database (`createDb(":memory:")` is supported), one browser test of save and open.
+- More tests: unit tests for `applySymbology` / `applyTableConfig` (with a stubbed layer), and one browser test of save and open.
 
 Extension points are also noted in comments in `src/configSchema.ts`, `server/shared/db/schema/configurations.ts` and `server/modules/configurations/configurations.routes.ts`.
 
@@ -96,3 +98,7 @@ Extension points are also noted in comments in `src/configSchema.ts`, `server/sh
 - **Used for:** writing most of the saved-configurations feature (backend module, API client, menu, OpenAPI setup), the default configuration, sharing, the architecture diagram, the code comments and this README, working in the existing codebase from the task description. The menu layout and behaviour (grouping, the "Public" switch) were shaped by my instructions over several sessions.
 - **Accepted:** SQLite instead of Postgres. It needs no external service, and nothing in scope needs Postgres's scalability.
 - **Rejected / changed:** the assistant suggested each browser generate a UUID to own its configurations. I decided the requirements (a user's saved configurations, reopened later and published to others) need real users, so there is a `users` table, sessions and sign-in.
+- **Verification:**
+  - **Automated tests, written by the assistant (`pnpm test`, Vitest):** 20 tests run the real Hono app against an in-memory SQLite database with the real migrations. They cover the schema's accept/reject rules, the public default (including 404 and a corrupt stored default giving 500), sign-in required, saving and listing, validation errors (400/415), and sharing: private configurations stay hidden, a published one shows its author to others and disappears on unpublish, another user's id gets 404 and nothing changes.
+  - **Mutation check, run by the assistant:** it temporarily removed the owner check from the publish `UPDATE` and confirmed the sharing tests fail, then restored it. This shows the tests can catch a broken ownership rule.
+  - **Manual testing of the frontend, done by me:** the frontend has no automated tests, so I checked every user flow in the browser against the requirements: the default loading on first start, changing point colour and size, showing, hiding and reordering table columns, signing in, saving a named configuration and reopening it, publishing, and opening a shared configuration as another user.
