@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
 import "@arcgis/map-components/components/arcgis-map";
 import "@arcgis/map-components/components/arcgis-legend";
@@ -6,8 +6,9 @@ import "@arcgis/map-components/components/arcgis-feature-table";
 import "@arcgis/map-components/components/arcgis-expand";
 import type { ArcgisMapCustomEvent } from "@arcgis/map-components";
 import type { ArcgisFeatureTable } from "@arcgis/map-components/components/arcgis-feature-table";
-import { Configuration, configure } from "./configuration";
+import { applySymbology, Configuration, configure } from "./configuration";
 import LoginMenu from "./auth/LoginMenu";
+import SymbologyPanel from "./symbology/SymbologyPanel";
 
 // This is a REST API - you can open this url on the browser to see the available fields in the layer
 const FEATURE_LAYER_URL =
@@ -24,16 +25,21 @@ const CONFIG: Configuration = {
   }
 };
 
-/**
- * Sample usage of the configure function:
- *
- * if (layer && tableRef.current) {
- *   configure(layer, tableRef.current, newConfig);
- * }
- */
 export default function App() {
   const [layer, setLayer] = useState<FeatureLayer | null>(null);
+  const [symbolConfig, setSymbolConfig] = useState(CONFIG.symbolConfig);
   const tableRef = useRef<ArcgisFeatureTable | null>(null);
+
+  // Table + initial symbology, once the layer (and with it the table) exists.
+  useEffect(() => {
+    if (layer && tableRef.current) configure(layer, tableRef.current, CONFIG);
+  }, [layer]);
+
+  // Symbology edits from the settings panel.
+  useEffect(() => {
+    if (layer) applySymbology(layer, symbolConfig);
+  }, [layer, symbolConfig]);
+
   const handleReady = useCallback((event: ArcgisMapCustomEvent<void>) => {
     const view = event.target.view;
 
@@ -74,6 +80,13 @@ export default function App() {
         width: "100vw",
       }}
     >
+      {layer && (
+        <SymbologyPanel
+          layer={layer}
+          initialConfig={CONFIG.symbolConfig}
+          onChange={setSymbolConfig}
+        />
+      )}
       <LoginMenu />
       <arcgis-map
         id="map"
@@ -87,12 +100,7 @@ export default function App() {
       </arcgis-map>
       {layer && (
         <arcgis-feature-table
-          ref={el => {
-            if (el) {
-              tableRef.current = el;
-              configure(layer, el, CONFIG);
-            }
-          }}
+          ref={tableRef}
           referenceElement="map"
           layer={layer}
           style={{ height: "40vh" }}

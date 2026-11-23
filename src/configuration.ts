@@ -12,13 +12,11 @@ import type { Configuration } from "./configSchema";
 // The schema lives in configSchema.ts so the backend can share it; re-exported for existing imports.
 export type { Configuration, SizeStop, ColorStop } from "./configSchema";
 
-export const configure = (
+/** Applies only the symbology part of a configuration, leaving the table untouched. */
+export const applySymbology = (
   layer: FeatureLayer,
-  table: HTMLArcgisFeatureTableElement,
-  config: Configuration,
+  symbolConfig: Configuration["symbolConfig"],
 ) => {
-  const { symbolConfig, tableConfig } = config;
-
   const visualVariables: Array<
     (SizeVariableProperties & { type: "size" }) | (ColorVariableProperties & { type: "color" })
   > = [];
@@ -51,6 +49,16 @@ export const configure = (
     visualVariables
   });
   layer.renderer = renderer;
+};
+
+export const configure = (
+  layer: FeatureLayer,
+  table: HTMLArcgisFeatureTableElement,
+  config: Configuration,
+) => {
+  const { symbolConfig, tableConfig } = config;
+
+  applySymbology(layer, symbolConfig);
 
   table.tableTemplate = new TableTemplate({
     columnTemplates: tableConfig.columns.map(
