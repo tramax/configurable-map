@@ -1,6 +1,6 @@
 import Collection from "@arcgis/core/core/Collection";
 import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
-import UniqueValueRenderer from "@arcgis/core/renderers/UniqueValueRenderer";
+import SimpleRenderer from "@arcgis/core/renderers/SimpleRenderer";
 import type { ColorVariableProperties } from "@arcgis/core/renderers/visualVariables/ColorVariable";
 import type { SizeVariableProperties } from "@arcgis/core/renderers/visualVariables/SizeVariable";
 import SimpleMarkerSymbol from "@arcgis/core/symbols/SimpleMarkerSymbol";
@@ -17,6 +17,9 @@ export const applySymbology = (
   layer: FeatureLayer,
   symbolConfig: Configuration["symbolConfig"],
 ) => {
+  // The legend titles say which visual channel each field drives, e.g. "Color: Leaf Area".
+  const fieldLabel = (name: string) => layer.fields?.find((f) => f.name === name)?.alias || name;
+
   const visualVariables: Array<
     (SizeVariableProperties & { type: "size" }) | (ColorVariableProperties & { type: "color" })
   > = [];
@@ -25,6 +28,7 @@ export const applySymbology = (
       type: "size",
       field: symbolConfig.size.field,
       stops: symbolConfig.size.stops,
+      legendOptions: { title: `Size: ${fieldLabel(symbolConfig.size.field)}` },
     });
   }
   if (symbolConfig.color) {
@@ -32,21 +36,19 @@ export const applySymbology = (
       type: "color",
       field: symbolConfig.color.field,
       stops: symbolConfig.color.stops,
+      legendOptions: { title: `Color: ${fieldLabel(symbolConfig.color.field)}` },
     });
   }
 
-  const primaryField =
-    symbolConfig.color?.field ?? symbolConfig.size?.field ?? layer.objectIdField;
-
-  const renderer = new UniqueValueRenderer({
-    field: primaryField,
-    defaultSymbol: new SimpleMarkerSymbol({
+  // A SimpleRenderer: every tree shares one base symbol and the visual variables vary it. (A
+  // UniqueValueRenderer with no values added a meaningless "others" entry to the legend.)
+  const renderer = new SimpleRenderer({
+    symbol: new SimpleMarkerSymbol({
       color: "#2b8a3e",
       size: 6,
       outline: { color: "white", width: 0.5 },
     }),
-    uniqueValueInfos: [],
-    visualVariables
+    visualVariables,
   });
   layer.renderer = renderer;
 };
