@@ -158,7 +158,7 @@ It then appears in Swagger UI with no further documentation work.
 - **Numeric fields only for symbology.** A continuous ramp only makes sense for numbers. The table can show any field.
 - **SQLite and server-side sessions.** Easy to run locally with no external services, and sessions can be revoked. This ties the API to a single node. Cookie sessions fit a same-origin app; `SameSite=Lax` plus the JSON-only content type protect state-changing requests from cross-site forms, without a separate CSRF token.
 - **No registration.** Accounts are seeded, to keep the focus on configurations.
-- **One dataset.** Configurations are stored per dataset id, and the app uses a fixed `landscape-trees` id. The schema supports more.
+- **One dataset.** Configurations are stored per dataset id, and the app uses a fixed `landscape-trees` id (the `DATASET_ID` constant in `src/App.tsx`). The schema and API support more.
 - **The schema is ahead of the feature.** `visibility`, `isDefault` and `publishedAt` were in the table before there was a feature behind them, so that system defaults and sharing could be added without migrating saved data. The default configuration now uses `system` and `isDefault`; `public` and `publishedAt` are still unused.
 - **Duplicate names are allowed.** Nothing was specified, and a unique name per user would have added an error path.
 - **"1 default configuration" means one per dataset.** The requirement does not say whether the default is global or per dataset. Per dataset matches the unique index already in the schema (`ux_configurations_default`), and a configuration names fields of one particular layer, so a single global default could not fit two datasets.
@@ -174,6 +174,7 @@ It then appears in Swagger UI with no further documentation work.
 
 ## Known limitations
 
+- The app serves one dataset. The id is a constant (`DATASET_ID` in `src/App.tsx`), so there is no dataset picker and showing a different layer needs a code change.
 - Saved configurations cannot be renamed, updated or deleted, and the only configuration opened automatically on load is the dataset's default, not the user's last one.
 - Duplicate names are allowed, so a user can create several entries that look the same in the list.
 - The list is not paginated or searchable.
