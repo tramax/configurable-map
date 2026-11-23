@@ -28,7 +28,19 @@ export const savedConfigurationSchema = z
       description: "`private` configurations are visible to their owner only",
     }),
     isDefault: z.boolean(),
+    author: z.string().nullable().openapi({
+      description: "Username of the owner; `null` for platform (system) configurations",
+    }),
+    mine: z.boolean().openapi({ description: "Whether the signed-in user owns it (and so may publish or unpublish it)" }),
     createdAt: z.string().openapi({ format: "date-time" }),
+    publishedAt: z.string().nullable().openapi({
+      format: "date-time",
+      description: "When it was published; `null` unless `visibility` is `public`",
+    }),
     config: configSchema,
   })
   .openapi("SavedConfiguration");
+
+export const idParamSchema = z.object({
+  id: z.string().min(1).max(100).openapi({ description: "Configuration id" }),
+});

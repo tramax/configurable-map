@@ -7,7 +7,13 @@ export interface SavedConfiguration {
   name: string;
   visibility: "system" | "private" | "public";
   isDefault: boolean;
+  /** Username of the owner; null for predefined configurations. */
+  author: string | null;
+  /** Whether the signed-in user owns it, and so may publish or unpublish it. */
+  mine: boolean;
   createdAt: string;
+  /** Set when `visibility` is "public". */
+  publishedAt: string | null;
   config: Configuration;
 }
 
@@ -17,6 +23,8 @@ export interface SavedConfiguration {
  *   GET  /api/configurations/default?datasetId=... -> 200 SavedConfiguration, or 404 if there is none (no sign-in needed)
  *   GET  /api/configurations?datasetId=...         -> 200 SavedConfiguration[] (newest first)    (signed in)
  *   POST /api/configurations                       -> 201 SavedConfiguration   body: { datasetId, name, config }   (signed in)
+ *   POST /api/configurations/:id/publish           -> 200 SavedConfiguration (now public)    (signed in, own configurations)
+ *   POST /api/configurations/:id/unpublish         -> 200 SavedConfiguration (now private)   (signed in, own configurations)
  */
 
 const DEFAULT_TIMEOUT_MS = 5000;
@@ -73,5 +81,24 @@ export async function saveConfiguration(
     throw new Error("Unable to reach the server. Please try again.");
   }
   if (!res.ok) throw new Error(await errorMessage(res, "Couldn't save the configuration."));
+  return (await res.json()) as SavedConfiguration;
+}
+
+/** Shares (`true`) or stops sharing (`false`) one of the user's own configurations. */
+export async function setPublished(id: string, published: boolean): Promise<SavedConfiguration> {
+  let res: Response;
+  try {
+    res = await fetch(`/api/configurations/${encodeURIComponent(id)}/${published ? "publish" : "unpublish"}`, {
+      method: "POST",
+      credentials: "same-origin",
+    });
+  } catch {
+    throw new Error("Unable to reach the server. Please try again.");
+  }
+  if (!res.ok) {
+    throw new Error(
+      await errorMessage(res, published ? "Couldn't publish the configuration." : "Couldn't stop sharing the configuration."),
+    );
+  }
   return (await res.json()) as SavedConfiguration;
 }

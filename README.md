@@ -1,6 +1,6 @@
 # Configurable Trees
 
-A web mapping application that visualizes the open Landscape Trees data on ArcGIS Online's Living Atlas ([feature service](https://services.arcgis.com/V6ZHFr6zdgNZuVG0/arcgis/rest/services/Landscape_Trees/FeatureServer/0), open the link to explore its fields). Users can configure how the trees are drawn and which columns the attribute table shows, and signed-in users can save those configurations under a name and reopen them later.
+A web mapping application that visualizes the open Landscape Trees data on ArcGIS Online's Living Atlas ([feature service](https://services.arcgis.com/V6ZHFr6zdgNZuVG0/arcgis/rest/services/Landscape_Trees/FeatureServer/0), open the link to explore its fields). Users can configure how the trees are drawn and which columns the attribute table shows, and signed-in users can save those configurations under a name, reopen them later, and share them with everyone else.
 
 ## Contents
 
@@ -33,7 +33,9 @@ The map is rendered with the [ArcGIS Maps SDK for JavaScript](https://developers
 
 **Saved configurations.** A signed-in user types a name and saves what is on screen. The configuration is stored through the backend API (see below) and appears in that user's list, from which it can be reopened at any time, including after a reload or on another browser. Opening one applies both parts: the symbology goes to the map, legend and symbology panel, and the column list goes to the table. The symbology comes from the app's current symbology state, and the columns are read from the live table at save time, so changes made in the table's column menu are included. Updating and deleting saved configurations is not part of the solution.
 
-**Accounts.** There is no registration. Three demo users are created by the seed script, and each user only sees their own saved configurations, plus the predefined ones.
+**Sharing.** A user can publish any of their own configurations with the "Public" switch beside its row in the menu, and switch it off to stop sharing. The switch has its own area next to the item, so hovering shows which of the two a click will do: open the configuration, or change whether it is public. A published configuration appears for every signed-in user under "Shared by others", with its author's username, and opening it works exactly like opening one's own. Sharing does not hand over control: only the owner can publish or unpublish it. To build on someone else's configuration, a user opens it, changes the map or table, and saves the result under their own name, which makes a private copy of what is on screen (nothing links the copy back to the original). The menu is grouped into "My configurations", "Shared by others" and "Predefined".
+
+**Accounts.** There is no registration. Three demo users are created by the seed script, and each user only sees their own saved configurations, plus the predefined ones. Signing out does not touch the map: whatever configuration is on screen (symbology and table columns) stays as it is, and only the saved-configurations list changes, since it is tied to the signed-in user.
 
 ### Changes to the starter code
 
@@ -77,7 +79,7 @@ Browser (React 19 + Vite)               Server (Hono on Node)             SQLite
 - `shared/openapi.ts` holds what every module uses to declare its routes: the router factory, the shared error response and the JSON-only guard.
 - `shared/db/` holds the drizzle schema, migrations, the client and the seed script.
 
-**Data model.** The `configurations` table stores the configuration as a JSON column next to its owner, dataset id, name and `visibility` (`system`, `private` or `public`). Constraints keep the combinations consistent, so the database cannot hold these states: a default that is not a `system` configuration, a `system` configuration with an owner (or an owned one without `system`), or two defaults for the same dataset (a partial unique index). `system` rows come from the seed script and `private` rows from the API; `public` is in the schema for the improvements listed below.
+**Data model.** The `configurations` table stores the configuration as a JSON column next to its owner, dataset id, name and `visibility` (`system`, `private` or `public`). Constraints keep the combinations consistent, so the database cannot hold these states: a default that is not a `system` configuration, a `system` configuration with an owner (or an owned one without `system`), or two defaults for the same dataset (a partial unique index). `system` rows come from the seed script and `private` rows from the API; `public` rows are the published ones, and the constraint that `publishedAt` is set exactly when a row is `public` keeps the two in step.
 
 **Shared schema.** `src/configSchema.ts` defines a configuration once, as a [zod](https://zod.dev/) schema, and the `Configuration` type is derived from it. The server uses the schema to validate requests and to generate the API documentation. The frontend imports only the type, so zod is not part of the browser bundle, and the file has no ArcGIS imports, so the server never loads the SDK.
 
@@ -87,7 +89,9 @@ Browser (React 19 + Vite)               Server (Hono on Node)             SQLite
 
 0. Start: `App` requests `GET /api/configurations/default` as soon as it mounts, in parallel with the map becoming ready. Once the layer has loaded and the default has arrived (or failed), the layer is styled with the default's symbology and only then added to the map; the symbology panel and the table are given the rest.
 1. Save: the menu asks `App` for the current configuration (symbology state plus the table's visible columns), then `POST /api/configurations`. The server validates it, stores it as a private row owned by the session's user, and returns it.
-2. Open: the menu lists `GET /api/configurations` once the user signs in. Picking one applies its table part to the table, and its symbology to the layer and, by remounting it with the new starting point, to the symbology panel.
+2. Open: the menu lists `GET /api/configurations` once the user signs in (their own, the published ones of other users, and the predefined ones). Picking one applies its table part to the table, and its symbology to the layer and, by remounting it with the new starting point, to the symbology panel.
+
+**Share flow.** The switch calls `POST /api/configurations/{id}/publish` (or `/unpublish`). The server flips `visibility` between `private` and `public` and sets or clears `publishedAt` in a single `UPDATE ... WHERE id = ? AND owner_id = ?`, so the ownership check and the write cannot be separated. Other users receive the row in their next `GET /api/configurations`; the response never contains the owner's id, only `author` (the username) and `mine` (whether the viewer owns it).
 
 ## Local setup
 
@@ -137,6 +141,8 @@ At a glance (the generated documentation has the full schemas and every response
 | `GET /api/configurations/default?datasetId=` | The dataset's default configuration (`404` if it has none). | no            |
 | `GET /api/configurations?datasetId=` | The configurations of a dataset that the user may open, newest first. | yes           |
 | `POST /api/configurations`           | Save a new private configuration `{ datasetId, name, config }`.       | yes           |
+| `POST /api/configurations/{id}/publish`   | Share one of the user's own configurations with every signed-in user. | yes           |
+| `POST /api/configurations/{id}/unpublish` | Make it private again.                                                | yes           |
 
 Conventions that hold for every endpoint: JSON in and out; errors are `{ "error": "<message>" }`, where a request that fails validation gets `400` and a message naming the first problem (for example `config.symbolConfig.color.stops.0.color: Expected a #rrggbb color`); a body that is not JSON gets `415`; no session gets `401` (except on the endpoints marked "no" above).
 
@@ -160,6 +166,12 @@ It then appears in Swagger UI with no further documentation work.
 - **No registration.** Accounts are seeded, to keep the focus on configurations.
 - **One dataset.** Configurations are stored per dataset id, and the app uses a fixed `landscape-trees` id (the `DATASET_ID` constant in `src/App.tsx`). The schema and API support more.
 - **The schema is ahead of the feature.** `visibility`, `isDefault` and `publishedAt` were in the table before there was a feature behind them, so that system defaults and sharing could be added without migrating saved data. The default configuration now uses `system` and `isDefault`; `public` and `publishedAt` are still unused.
+- **Sharing is publishing to all signed-in users.** The task left the mechanism open. The options considered were a public link per configuration, sharing with chosen users, and a common gallery. A gallery fits the schema that was already there (`public`, `publishedAt`), needs no new table, link format or user picker (with three demo users and no user directory there is nobody to pick from), and makes shared configurations easy to find. The cost is that sharing is all or nothing: a user cannot share with one colleague only, and cannot send someone a link.
+- **Only signed-in users see shared configurations.** The list endpoint needs a session, so a published configuration is not visible to anonymous visitors. Only the default is public to them (it is needed before sign-in). Opening the menu already asks people to sign in, so showing shared ones to anonymous users would add an endpoint and a state for little.
+- **Published configurations show the author's username.** Attribution makes a gallery usable and lets users judge what they open, but it tells every signed-in user the username of whoever published. With seeded demo accounts that is harmless; with real accounts it would want a display name the user chose.
+- **Publishing is immediate and reversible, with no review.** Anyone can publish anything they saved (the name is the only free text, and it is rendered as text). There is no moderation, no reporting, and no limit on how many a user can publish. Unpublishing removes it from everyone's list at once; people who already opened it keep what is on screen, and copies they saved are theirs.
+- **Someone else's id looks like a missing id.** Publishing or unpublishing a configuration you do not own, a predefined one, or one that does not exist all answer `404`, so private configuration ids cannot be probed with these endpoints.
+- **Shared configurations cannot be edited in place, by anyone.** Nothing can be updated (see "Known limitations"), so what others opened cannot change under them. A user who wants a variation saves their own copy; the copy keeps no reference to its source.
 - **Duplicate names are allowed.** Nothing was specified, and a unique name per user would have added an error path.
 - **"1 default configuration" means one per dataset.** The requirement does not say whether the default is global or per dataset. Per dataset matches the unique index already in the schema (`ux_configurations_default`), and a configuration names fields of one particular layer, so a single global default could not fit two datasets.
 - **The default is data, not code.** It is a `system` configuration with `isDefault = true`, created by the seed script, rather than a constant in the frontend. Changing it is a data change, a second dataset gets its own default without touching the frontend, and it appears in the saved-configurations list like any other system configuration. The cost is that the default depends on the seed having run: without it, the app uses the fallback below. The seed does not overwrite an existing default, so changes made in the database are kept; the price is that editing the default in `seed.ts` has no effect on a database that already has one.
@@ -178,7 +190,9 @@ It then appears in Swagger UI with no further documentation work.
 - Saved configurations cannot be renamed, updated or deleted, and the only configuration opened automatically on load is the dataset's default, not the user's last one.
 - Duplicate names are allowed, so a user can create several entries that look the same in the list.
 - The list is not paginated or searchable.
-- Configurations cannot be shared: there is no UI to publish one. The default configuration can only be changed in the database or the seed; there is no admin UI.
+- Sharing is all or nothing: a configuration is either private or visible to every signed-in user. There is no sharing with chosen users, no link to send, and no way to see who has opened a shared configuration. A shared configuration also cannot be renamed or deleted, only unpublished.
+- The shared list is not paginated, searchable or sortable by anything but date, and there is no moderation of what users publish.
+- The default configuration can only be changed in the database or the seed; there is no admin UI.
 - In development, React's strict mode mounts `App` twice, so the default is requested twice. This does not happen in a production build.
 - Table column state is read from the live table when saving. Only visible columns and their order are saved, so column widths and sort order are not.
 - There are no automated tests. The feature was checked by hand and with a throwaway browser script (see AI usage disclosure), neither of which is in the repository.
@@ -191,7 +205,8 @@ It then appears in Swagger UI with no further documentation work.
 ## Further improvements
 
 - Rename, update and delete for a user's own configurations, with a unique name per user and dataset.
-- An option to publish a private configuration (`visibility` and `publishedAt` are already in the schema), and a way to manage the default and other system configurations without editing the database.
+- Finer sharing: share with named users or a group, or by link, and let the owner see how often a shared configuration is used. A way to manage the default and other system configurations without editing the database.
+- A "save as copy" action on shared configurations that remembers its source, and search, sorting and pagination for the shared list.
 - Open the user's last used configuration on load, instead of always the default.
 - Save more of the view: sort order, column widths, filters, basemap and extent.
 - Validate saved fields against the layer when opening, and tell the user which parts could not be applied.
@@ -205,5 +220,7 @@ It then appears in Swagger UI with no further documentation work.
 AI coding assistants were used on this project. This section describes the **saved configurations feature**: the backend module (`server/modules/configurations/`), the client (`src/configurations/`), the supporting changes in `App.tsx`, `LoginMenu.tsx` and `configuration.ts`, the move of the auth and configuration routes to generated OpenAPI documentation (`server/shared/openapi.ts`, the route and schema files, `src/configSchema.ts`), and this README were written by Claude Code (Claude Sonnet 5.5) from the task description, working in the existing codebase. It was checked by typechecking both the client and the server, by calling the API directly (unauthenticated, cross-user visibility, invalid names, colors, sizes and duplicate columns, a non-JSON body and malformed JSON, again after the move to generated documentation), by driving the real app in a headless browser (save, reload, reopen, and switching between configurations; that run was made before the documentation change), and by loading the generated Swagger UI in a headless browser. The throwaway scripts used for that were kept outside the repository.
 
 The **default configuration** (the seed, the public `GET /api/configurations/default` endpoint, and loading it in `App.tsx`) was added the same way, after a design discussion that settled the assumptions listed above. It was checked by typechecking both sides, by seeding twice (the second run keeps the row), by calling the endpoint with and without a session and with a missing or unknown dataset, by trying to insert the states the constraints should reject (all rejected) and a default for a second dataset (allowed), by corrupting the stored default (the endpoint answered `500`), and by loading the app in headless Edge twice: once with the default available (the layer already had its size and color ramps when it joined the map, and the table showed exactly the two configured columns) and once with the request blocked (plain symbology and the table's own columns). The throwaway scripts were kept outside the repository.
+
+The **sharing feature** (publish and unpublish endpoints, the `author`, `mine` and `publishedAt` fields, and the grouped menu with its "Public" switch) was added the same way. Claude Code wrote the code, but the menu's layout and behavior (the grouping, the "Public" switch and its separate hover area) were shaped by the author's instructions over several sessions; the assumptions behind it are listed under "Assumptions and trade-offs". It was checked by typechecking both sides, by calling the API as two users (a private configuration is invisible to the other user; the other user, an anonymous caller, a predefined configuration and a missing id cannot publish or unpublish; publishing twice keeps the first date; unpublishing hides it again), and by driving the real app in headless Edge against a scratch database and ports (one user saves and shares, flipping the switch leaves the menu open, the other user sees it under "Shared by others" with its author and opens it, the first user stops sharing). The throwaway scripts were kept outside the repository. The look of the switch was only checked in a screenshot.
 
 AI output is a draft, not a source of truth: the code and the behavior described here should be reviewed like any other contribution.

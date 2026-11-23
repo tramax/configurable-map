@@ -5,9 +5,10 @@ import "@esri/calcite-components/components/calcite-list";
 import "@esri/calcite-components/components/calcite-list-item";
 import "@esri/calcite-components/components/calcite-notice";
 import "@esri/calcite-components/components/calcite-popover";
+import "@esri/calcite-components/components/calcite-switch";
 import type { AuthUser } from "../auth/api";
 import type { Configuration } from "../configSchema";
-import { listConfigurations, saveConfiguration, SavedConfiguration } from "./api";
+import { listConfigurations, saveConfiguration, SavedConfiguration, setPublished } from "./api";
 import "./ConfigurationsMenu.css";
 
 export interface ConfigurationsMenuProps {
@@ -23,6 +24,20 @@ export interface ConfigurationsMenuProps {
 
 const MAX_NAME_LENGTH = 100;
 
+/** The list is shown in these sections, in this order; every configuration falls in exactly one. */
+const GROUPS: Array<{ title: string; include: (c: SavedConfiguration) => boolean }> = [
+  { title: "My configurations", include: (c) => c.mine },
+  { title: "Shared by others", include: (c) => !c.mine && c.visibility === "public" },
+  { title: "Predefined", include: (c) => c.visibility === "system" },
+];
+
+function describe(item: SavedConfiguration): string {
+  if (item.visibility === "system") return item.isDefault ? "Default configuration" : "Predefined configuration";
+  if (!item.mine) return `By ${item.author} · shared ${new Date(item.publishedAt ?? item.createdAt).toLocaleDateString()}`;
+  const saved = `Saved ${new Date(item.createdAt).toLocaleString()}`;
+  return item.visibility === "public" ? `${saved} · public` : saved;
+}
+
 /**
  * Fixed top-right button (left of the symbology button). Opens a popover where a signed-in user
  * can save what is on screen under a name and reopen any of their saved configurations.
@@ -34,6 +49,8 @@ export default function ConfigurationsMenu({ user, datasetId, getCurrent, onOpen
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [shareError, setShareError] = useState<string | null>(null);
+  const [sharingId, setSharingId] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   // The popover anchors to (and is toggled by) this button; kept in state so the popover re-renders once it exists.
   const [button, setButton] = useState<HTMLElement | null>(null);
@@ -44,6 +61,7 @@ export default function ConfigurationsMenu({ user, datasetId, getCurrent, onOpen
     setSaved([]);
     setActiveId(null);
     setLoadError(null);
+    setShareError(null);
     if (!userId) return;
     let cancelled = false;
     listConfigurations(datasetId).then(
@@ -70,6 +88,22 @@ export default function ConfigurationsMenu({ user, datasetId, getCurrent, onOpen
       setSaveError(err instanceof Error ? err.message : "Couldn't save the configuration.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleTogglePublished(item: SavedConfiguration, toggle: HTMLCalciteSwitchElement) {
+    if (sharingId) return;
+    setSharingId(item.id);
+    setShareError(null);
+    try {
+      const updated = await setPublished(item.id, toggle.checked);
+      setSaved((rows) => rows.map((r) => (r.id === updated.id ? updated : r)));
+    } catch (err) {
+      // The switch has already flipped itself; put it back, since nothing changed on the server.
+      toggle.checked = item.visibility === "public";
+      setShareError(err instanceof Error ? err.message : "Couldn't change whether it is public.");
+    } finally {
+      setSharingId(null);
     }
   }
 
@@ -138,26 +172,57 @@ export default function ConfigurationsMenu({ user, datasetId, getCurrent, onOpen
                   <div slot="message">{loadError}</div>
                 </calcite-notice>
               )}
+              {shareError && (
+                <calcite-notice open kind="danger" scale="s" width="full" icon role="alert">
+                  <div slot="message">{shareError}</div>
+                </calcite-notice>
+              )}
               {saved.length === 0 && !loadError ? (
                 <calcite-notice open kind="neutral" scale="s" width="full">
                   <div slot="message">You haven't saved any configurations yet.</div>
                 </calcite-notice>
               ) : (
-                <calcite-list label="Configurations" selection-mode="none">
-                  {saved.map((item) => (
-                    <calcite-list-item
-                      key={item.id}
-                      label={item.name}
-                      description={
-                        item.visibility === "system"
-                          ? item.isDefault ? "Default configuration" : "Predefined configuration"
-                          : `Saved ${new Date(item.createdAt).toLocaleString()}`
-                      }
-                      icon-start={item.id === activeId ? "check" : undefined}
-                      oncalciteListItemSelect={() => handleOpen(item)}
-                    />
-                  ))}
-                </calcite-list>
+                GROUPS.map(({ title, include }) => {
+                  const items = saved.filter(include);
+                  if (items.length === 0) return null;
+                  return (
+                    <section key={title} className="configurations__group">
+                      <h3 className="configurations__group-title">{title}</h3>
+                      <div role="list" aria-label={title} className="configurations__rows">
+                        {items.map((item) => (
+                          // Two separate hover zones per row: the item (click to open) and, for the user's own
+                          // configurations, the "Public" switch beside it. They are siblings, not nested, so
+                          // hovering the switch does not highlight the item, and the other way round.
+                          <div key={item.id} role="listitem" className="configurations__row">
+                            <calcite-list selection-mode="none" label={item.name} className="configurations__open">
+                              <calcite-list-item
+                                label={item.name}
+                                description={describe(item)}
+                                icon-start={item.id === activeId ? "check" : undefined}
+                                oncalciteListItemSelect={() => handleOpen(item)}
+                              />
+                            </calcite-list>
+                            {item.mine && (
+                              <label
+                                className="configurations__public"
+                                title="Public configurations can be opened by every signed-in user"
+                              >
+                                Public
+                                <calcite-switch
+                                  scale="s"
+                                  label={`Make "${item.name}" public`}
+                                  checked={item.visibility === "public"}
+                                  disabled={sharingId !== null}
+                                  oncalciteSwitchChange={(e) => handleTogglePublished(item, e.target)}
+                                />
+                              </label>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  );
+                })
               )}
             </>
           )}
