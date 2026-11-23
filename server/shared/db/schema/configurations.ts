@@ -19,6 +19,16 @@ export type Visibility = (typeof VISIBILITIES)[number];
  *  - system:  predefined by the platform (owner is NULL); exactly one per dataset is the default
  *  - private: a user's saved configuration, visible only to its owner
  *  - public:  a private configuration its owner has published for everyone
+ *
+ * HOW TO EXTEND
+ *  - Sharing with chosen users or groups: add a `shared_with` join table (configuration_id,
+ *    user_id) and a `shared` visibility. The list query in configurations.routes.ts already
+ *    filters by visibility/owner, so it gains one more OR branch.
+ *  - Sharing by link: add a `share_token` column, and a public GET route that looks it up.
+ *  - Update/delete: add PATCH/DELETE routes that reuse the ownership-in-the-WHERE pattern of
+ *    `setPublished`; add `updatedAt` here.
+ *  - More datasets: nothing to change here; rows are already keyed by `datasetId`.
+ *  - Per-user default: add a `user_defaults` table (user_id, dataset_id, configuration_id).
  */
 export const configurations = sqliteTable(
   "configurations",

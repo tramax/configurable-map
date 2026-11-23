@@ -137,6 +137,12 @@ const unpublishRoute = createRoute({
   },
 });
 
+/*
+ * Extending this module: declare a new route with `createRoute` (see the ones above) and register
+ * it with `router.openapi(...)` below. Place it above `router.use("*", requireAuth)` only if it
+ * must be public. Update and delete (not implemented) should follow `setPublished`: put the
+ * `owner_id = ?` check in the same SQL statement and answer 404 for rows that are not the user's.
+ */
 export function configurationRoutes(db: Db) {
   const router = createRouter();
 
