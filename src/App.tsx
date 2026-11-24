@@ -12,7 +12,7 @@ import { AuthUser, fetchCurrentUser } from "./auth/api";
 import LoginMenu from "./auth/LoginMenu";
 import ConfigurationsMenu from "./configurations/ConfigurationsMenu";
 import { fetchDefaultConfiguration, type SavedConfiguration } from "./configurations/api";
-import SymbologyPanel from "./symbology/SymbologyPanel";
+import SymbologyPanel, { useSymbology } from "./symbology";
 
 // This is a REST API - you can open this url on the browser to see the available fields in the layer
 const FEATURE_LAYER_URL =
@@ -21,12 +21,7 @@ const FEATURE_LAYER_URL =
 // Saved configurations are stored per dataset.
 const DATASET_ID = "landscape-trees";
 
-type SymbolConfig = Configuration["symbolConfig"];
 type TableConfig = Configuration["tableConfig"];
-
-// With no default configuration (none stored, or the server could not be reached) the points get
-// this plain symbology and the table keeps its own default columns.
-const NO_SYMBOLOGY: SymbolConfig = {};
 
 export default function App() {
   const [layer, setLayer] = useState<FeatureLayer | null>(null);
@@ -43,10 +38,11 @@ export default function App() {
     ),
   );
   const [defaultTable, setDefaultTable] = useState<TableConfig | null>(null);
-  const [symbolConfig, setSymbolConfig] = useState(NO_SYMBOLOGY);
-  // What the symbology panel starts from. It keeps its own draft, so opening a saved configuration
-  // hands it a new `initial` and a new `version`, which remounts it.
-  const [panelStart, setPanelStart] = useState({ initial: NO_SYMBOLOGY, version: 0 });
+  // With no default configuration (none stored, or the server could not be reached) the points
+  // keep plain symbology and the table its own default columns.
+  const symbology = useSymbology();
+  const symbolConfig = symbology.config;
+  const loadSymbology = symbology.load;
   const tableRef = useRef<ArcgisFeatureTable | null>(null);
 
   // Restore an existing session on load.
@@ -86,10 +82,9 @@ export default function App() {
     ({ config }: SavedConfiguration) => {
       if (!layer || !tableRef.current) return;
       applyTableConfig(layer, tableRef.current, config.tableConfig);
-      setSymbolConfig(config.symbolConfig);
-      setPanelStart((p) => ({ initial: config.symbolConfig, version: p.version + 1 }));
+      loadSymbology(config.symbolConfig);
     },
-    [layer],
+    [layer, loadSymbology],
   );
 
   const handleReady = useCallback(async (event: ArcgisMapCustomEvent<void>) => {
@@ -125,11 +120,10 @@ export default function App() {
     if (layer.fullExtent) view?.goTo(layer.fullExtent).catch(() => {});
 
     // One batch: the panel and the table are rendered once the layer is set, already knowing their start.
-    setSymbolConfig(defaultConfig?.symbolConfig ?? NO_SYMBOLOGY);
-    setPanelStart((p) => ({ initial: defaultConfig?.symbolConfig ?? NO_SYMBOLOGY, version: p.version + 1 }));
+    loadSymbology(defaultConfig?.symbolConfig ?? {});
     setDefaultTable(defaultConfig?.tableConfig ?? null);
     setLayer(layer);
-  }, [defaultRequest]);
+  }, [defaultRequest, loadSymbology]);
 
   return (
     <div
@@ -150,10 +144,11 @@ export default function App() {
       )}
       {layer && (
         <SymbologyPanel
-          key={panelStart.version}
           layer={layer}
-          initialConfig={panelStart.initial}
-          onChange={setSymbolConfig}
+          draft={symbology.draft}
+          version={symbology.version}
+          onChange={symbology.setChannel}
+          onReset={symbology.reset}
         />
       )}
       <LoginMenu user={user} onUserChange={setUser} />
