@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { SubmitEvent, useEffect, useRef, useState } from "react";
 import "@esri/calcite-components/components/calcite-button";
 import "@esri/calcite-components/components/calcite-input";
 import "@esri/calcite-components/components/calcite-notice";
@@ -30,7 +30,7 @@ export default function LoginMenu({ user, onUserChange }: LoginMenuProps) {
     if (open && !user) void usernameRef.current?.setFocus();
   }, [open, user]);
 
-  async function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: SubmitEvent) {
     e.preventDefault();
     if (busy) return;
     setBusy(true);

@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from "react";
+import { SubmitEvent, useEffect, useState } from "react";
 import "@esri/calcite-components/components/calcite-button";
 import "@esri/calcite-components/components/calcite-input-text";
 import "@esri/calcite-components/components/calcite-list";
@@ -73,7 +73,7 @@ export default function ConfigurationsMenu({ user, datasetId, getCurrent, onOpen
     };
   }, [userId, datasetId]);
 
-  async function handleSave(e: FormEvent) {
+  async function handleSave(e: SubmitEvent) {
     e.preventDefault();
     const trimmed = name.trim();
     if (saving || !trimmed) return;
