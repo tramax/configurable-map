@@ -1,4 +1,4 @@
-import { ReactNode, useRef, useState } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import summaryStatistics from "@arcgis/core/smartMapping/statistics/summaryStatistics";
 import type FeatureLayer from "@arcgis/core/layers/FeatureLayer";
 import "@esri/calcite-components/components/calcite-button";
@@ -53,6 +53,14 @@ export default function ChannelSection<StopAttrs>({
   const [loading, setLoading] = useState(false);
   const [statsError, setStatsError] = useState<string | null>(null);
   const request = useRef(0); // ignores stale statistics responses
+
+  // Unmounting (e.g. the panel's `version` changed) invalidates any request still in flight.
+  useEffect(() => {
+    const requestCounter = request;
+    return () => {
+      requestCounter.current++;
+    };
+  }, []);
 
   const enabled = value !== undefined;
   const error = value && validate ? validate(value.attrs) : null;
