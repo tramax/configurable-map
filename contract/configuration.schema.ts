@@ -35,7 +35,7 @@ const channel = <S extends z.ZodType>(stop: S) =>
  * HOW TO EXTEND THE CONFIGURATION
  *  - A new symbology channel (e.g. `rotation`, `opacity`, `outline`): add an optional entry under
  *    `symbolConfig` using `channel(...)` with its own stop schema, then map it to an ArcGIS visual
- *    variable in `applySymbology` (src/configuration.ts) and add a section to the SymbologyPanel.
+ *    variable in `applySymbology` (src/applyConfiguration.ts) and add a section to the SymbologyPanel.
  *    Existing saved configurations stay valid because the new entry is optional.
  *  - A new table setting (column widths, sort order): add an optional entry under `tableConfig`
  *    and apply it in `applyTableConfig`; read it back where `getTableColumns` is used on save.

@@ -4,7 +4,7 @@ import { createApp } from "../app";
 import { hashPassword } from "@modules/auth";
 import { createDb } from "@shared/db/client";
 import { configurations, users } from "@shared/db/schema";
-import type { Configuration } from "@src/configSchema";
+import type { Configuration } from "@contract/configuration.schema";
 
 export const DATASET = "landscape-trees";
 

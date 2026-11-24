@@ -10,7 +10,7 @@ import "@esri/calcite-components/components/calcite-option";
 import "@esri/calcite-components/components/calcite-popover";
 import "@esri/calcite-components/components/calcite-select";
 import "@esri/calcite-components/components/calcite-switch";
-import type { ColorStop, Configuration, SizeStop } from "../configSchema";
+import type { ColorStop, Configuration, SizeStop } from "@contract/configuration.schema";
 import "./SymbologyPanel.css";
 
 type SymbolConfig = Configuration["symbolConfig"];

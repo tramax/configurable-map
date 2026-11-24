@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { hashPassword } from "@modules/auth";
 import { createDb } from "./client";
-import { configurationSchema, type Configuration } from "@src/configSchema";
+import { configurationSchema, type Configuration } from "@contract/configuration.schema";
 import { configurations, users } from "./schema";
 
 // Demo accounts: there is no registration, these are the only users.

@@ -1,4 +1,4 @@
-import type { Configuration } from "../configSchema";
+import type { Configuration } from "@contract/configuration.schema";
 
 /** A configuration as stored by the server. */
 export interface SavedConfiguration {

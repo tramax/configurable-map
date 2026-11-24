@@ -9,7 +9,7 @@ export default defineConfig({
     alias: {
       "@shared": at("./server/shared"),
       "@modules": at("./server/modules"),
-      "@src": at("./src"),
+      "@contract": at("./contract"),
     },
   },
   test: {

@@ -7,7 +7,7 @@ import "@esri/calcite-components/components/calcite-notice";
 import "@esri/calcite-components/components/calcite-popover";
 import "@esri/calcite-components/components/calcite-switch";
 import type { AuthUser } from "../auth/api";
-import type { Configuration } from "../configSchema";
+import type { Configuration } from "@contract/configuration.schema";
 import { listConfigurations, saveConfiguration, SavedConfiguration, setPublished } from "./api";
 import "./ConfigurationsMenu.css";
 

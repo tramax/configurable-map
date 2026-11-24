@@ -7,11 +7,8 @@ import SimpleMarkerSymbol from "@arcgis/core/symbols/SimpleMarkerSymbol";
 import FieldColumnTemplate from "@arcgis/core/widgets/FeatureTable/support/FieldColumnTemplate";
 import TableTemplate from "@arcgis/core/widgets/FeatureTable/support/TableTemplate";
 
-import type { Configuration } from "./configSchema";
+import type { Configuration } from "@contract/configuration.schema";
 import { getTableFieldNames } from "./fields";
-
-// The schema lives in configSchema.ts so the backend can share it; re-exported for existing imports.
-export type { Configuration, SizeStop, ColorStop } from "./configSchema";
 
 /** Applies only the symbology part of a configuration, leaving the table untouched. */
 export const applySymbology = (

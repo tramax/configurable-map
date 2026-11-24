@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 // helpers first: it loads the app, and with it @hono/zod-openapi, which has to extend zod before
 // the API's schemas are built. The server always loads it in that order; a test must too.
 import { VALID_CONFIG } from "./helpers";
-import { configurationSchema } from "@src/configSchema";
+import { configurationSchema } from "@contract/configuration.schema";
 
 const withColumns = (columns: string[]) => ({ ...VALID_CONFIG, tableConfig: { columns } });
 

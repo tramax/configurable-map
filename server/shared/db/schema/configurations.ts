@@ -8,7 +8,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 // Type-only import: erased at runtime, so the server never loads @arcgis/core.
-import type { Configuration } from "@src/configSchema";
+import type { Configuration } from "@contract/configuration.schema";
 import { users } from "./users";
 
 export const VISIBILITIES = ["system", "private", "public"] as const;
@@ -22,7 +22,7 @@ export type Visibility = (typeof VISIBILITIES)[number];
  *
  * HOW TO EXTEND
  *  - Sharing with chosen users or groups: add a `shared_with` join table (configuration_id,
- *    user_id) and a `shared` visibility. The list query in configurations.routes.ts already
+ *    user_id) and a `shared` visibility. The list query in configurations.service.ts already
  *    filters by visibility/owner, so it gains one more OR branch.
  *  - Sharing by link: add a `share_token` column, and a public GET route that looks it up.
  *  - Update/delete: add PATCH/DELETE routes that reuse the ownership-in-the-WHERE pattern of

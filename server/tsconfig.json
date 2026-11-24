@@ -15,8 +15,8 @@
     "paths": {
       "@shared/*": ["./shared/*"],
       "@modules/*": ["./modules/*"],
-      "@src/*": ["../src/*"]
+      "@contract/*": ["../contract/*"]
     }
   },
-  "include": ["./**/*.ts", "../drizzle.config.ts"]
+  "include": ["./**/*.ts", "../contract/**/*.ts", "../drizzle.config.ts"]
 }

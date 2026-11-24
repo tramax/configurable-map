@@ -20,15 +20,16 @@ Accounts are seeded demo users (no registration).
 
 **[System architecture diagram](docs/architecture.md)**: web app, REST API, SQLite and the ArcGIS feature service, with every interaction labelled.
 
-- **One shared schema.** `src/configSchema.ts` (zod) defines a configuration once. The server validates requests with it and generates the API docs from it; the frontend imports only its types.
-- **Backend by feature module** (`server/modules/auth`, `server/modules/configurations`). Each route is declared once with `@hono/zod-openapi`, which gives validation, typed handlers and the OpenAPI document, so the docs cannot drift from the code.
+- **One shared schema.** `contract/configuration.schema.ts` (zod) defines a configuration once. The server validates requests with it and generates the API docs from it; the frontend imports only its types. The `contract/` folder is the one place for code both sides depend on; its [README](contract/README.md) says what may go in it.
+- **Backend by feature module** (`server/modules/auth`, `server/modules/configurations`). Each route is declared once with `@hono/zod-openapi`, which gives validation, typed handlers and the OpenAPI document, so the docs cannot drift from the code. Every module has the same layout: `*.schemas.ts` (what the API accepts and returns), `*.openapi.ts` (route declarations), `*.service.ts` (logic and queries, no HTTP types) and `*.routes.ts` (thin handlers).
 - **Auth.** Passwords are hashed with scrypt. A session is a random token in an HttpOnly, `SameSite=Lax` cookie; only its SHA-256 is stored.
 - **Data model.** One `configurations` table: owner, dataset id, name, `visibility` (`system` / `private` / `public`) and the configuration as a JSON column. Database constraints rule out impossible states (a private default, two defaults for one dataset, a public row without a publish date).
 - **Sharing is safe by construction.** Publish and unpublish are a single `UPDATE ... WHERE id = ? AND owner_id = ?`, and someone else's id answers `404`, so private ids cannot be probed.
 
 ### Changes to the starter code
 
-- `configuration.ts`: the renderer is now a `SimpleRenderer` so the legend shows the colour and size ramps and the field behind each. `applySymbology` and `applyTableConfig` were split out of `configure` (which keeps its signature). The table also gets a hidden column for every other field, so the column menu can reveal them.
+- `configuration.ts` is renamed `applyConfiguration.ts`: it applies a configuration to the map and table, and the old name was easy to confuse with the `configurations/` folder (saved configurations). It no longer re-exports the `Configuration`, `SizeStop` and `ColorStop` types; import them from `@contract/configuration.schema`. In the same file, the renderer is now a `SimpleRenderer` so the legend shows the colour and size ramps and the field behind each. `applySymbology` and `applyTableConfig` were split out of `configure` (which keeps its signature). The table also gets a hidden column for every other field, so the column menu can reveal them.
+- `configSchema.ts` moved from `src/` to `contract/configuration.schema.ts`, because the server uses it too and should not import from the frontend's folder. The `@contract` path alias is set in `tsconfig.json`, `server/tsconfig.json`, `vite.config.ts` and `vitest.config.ts`.
 - `App.tsx`: the hardcoded sample configuration is gone. The app loads the default from the API and applies it before the layer joins the map, so the points are never drawn in the service's own style first.
 
 ## Local setup
@@ -90,7 +91,7 @@ Errors are `{ "error": "<message>" }`: `400` invalid input, `401` not signed in,
 - Check saved fields against the layer when opening and tell the user what could not be applied.
 - More tests: unit tests for `applySymbology` / `applyTableConfig` (with a stubbed layer), and one browser test of save and open.
 
-Extension points are also noted in comments in `src/configSchema.ts`, `server/shared/db/schema/configurations.ts` and `server/modules/configurations/configurations.routes.ts`.
+Extension points are also noted in comments in `contract/configuration.schema.ts`, `server/shared/db/schema/configurations.ts` and `server/modules/configurations/configurations.routes.ts`.
 
 ## AI usage disclosure
 

@@ -1,5 +1,5 @@
 import { z } from "@hono/zod-openapi";
-import { configurationSchema } from "@src/configSchema";
+import { configurationSchema } from "@contract/configuration.schema";
 import { VISIBILITIES } from "@shared/db/schema";
 
 const datasetId = z.string().min(1).max(100).openapi({ example: "landscape-trees" });
