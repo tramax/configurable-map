@@ -8,7 +8,6 @@ type Saved = {
   visibility: string;
   mine: boolean;
   author: string | null;
-  publishedAt: string | null;
 };
 
 const list = async (client: { get: (p: string) => Promise<Response> }) =>
@@ -83,7 +82,6 @@ describe("saving a configuration", () => {
       visibility: "private",
       mine: true,
       author: "alice",
-      publishedAt: null,
     });
 
     const mine = (await list(alice)).find((configuration) => configuration.id === saved.id);
@@ -132,23 +130,12 @@ describe("sharing", () => {
 
     const seenByBob = (await list(bob)).find((configuration) => configuration.id === saved.id);
     expect(seenByBob).toMatchObject({ author: "alice", mine: false, visibility: "public" });
-    expect(seenByBob?.publishedAt).not.toBeNull();
 
     const unpublished = await alice.post(`/api/configurations/${saved.id}/unpublish`);
     expect(unpublished.status).toBe(200);
-    expect(((await unpublished.json()) as Saved).publishedAt).toBeNull();
+    expect(((await unpublished.json()) as Saved).visibility).toBe("private");
     expect((await list(bob)).some((configuration) => configuration.id === saved.id)).toBe(false);
     expect((await list(alice)).some((configuration) => configuration.id === saved.id)).toBe(true);
-  });
-
-  it("keeps the original publish date when publishing twice", async () => {
-    const { login } = createTestApp();
-    const alice = await login("alice");
-    const saved = await save(alice, "Twice");
-
-    const first = (await (await alice.post(`/api/configurations/${saved.id}/publish`)).json()) as Saved;
-    const second = (await (await alice.post(`/api/configurations/${saved.id}/publish`)).json()) as Saved;
-    expect(second.publishedAt).toBe(first.publishedAt);
   });
 
   it("answers 404 when publishing or unpublishing someone else's configuration, and changes nothing", async () => {

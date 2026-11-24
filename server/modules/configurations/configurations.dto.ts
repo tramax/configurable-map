@@ -19,6 +19,5 @@ export const toDto = (
   author,
   mine: viewerId !== null && record.ownerId === viewerId,
   createdAt: record.createdAt.toISOString(),
-  publishedAt: record.publishedAt?.toISOString() ?? null,
   config: record.config,
 });

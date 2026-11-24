@@ -33,7 +33,7 @@ const GROUPS: Array<{ title: string; include: (configuration: SavedConfiguration
 
 function describe(item: SavedConfiguration): string {
   if (item.visibility === "system") return item.isDefault ? "Default configuration" : "Predefined configuration";
-  if (!item.mine) return `By ${item.author} · shared ${new Date(item.publishedAt ?? item.createdAt).toLocaleDateString()}`;
+  if (!item.mine) return `By ${item.author} · created ${new Date(item.createdAt).toLocaleDateString()}`;
   const saved = `Saved ${new Date(item.createdAt).toLocaleString()}`;
   return item.visibility === "public" ? `${saved} · public` : saved;
 }

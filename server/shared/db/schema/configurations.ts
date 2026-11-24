@@ -44,7 +44,6 @@ export const configurations = sqliteTable(
     createdAt: integer("created_at", { mode: "timestamp_ms" })
       .notNull()
       .$defaultFn(() => new Date()),
-    publishedAt: integer("published_at", { mode: "timestamp_ms" }),
   },
   (t) => [
     check("configurations_name_length", sql`length(${t.name}) BETWEEN 1 AND 100`),
@@ -57,11 +56,6 @@ export const configurations = sqliteTable(
     check(
       "configurations_default_is_system",
       sql`${t.isDefault} = 0 OR ${t.visibility} = 'system'`,
-    ),
-    // Published state and timestamp must agree.
-    check(
-      "configurations_published_at_matches_visibility",
-      sql`(${t.visibility} = 'public') = (${t.publishedAt} IS NOT NULL)`,
     ),
     // At most one default per dataset.
     uniqueIndex("ux_configurations_default")

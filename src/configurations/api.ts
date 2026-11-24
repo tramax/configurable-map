@@ -12,8 +12,6 @@ export interface SavedConfiguration {
   /** Whether the signed-in user owns it, and so may publish or unpublish it. */
   mine: boolean;
   createdAt: string;
-  /** Set when `visibility` is "public". */
-  publishedAt: string | null;
   config: Configuration;
 }
 

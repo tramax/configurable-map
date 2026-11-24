@@ -33,10 +33,6 @@ export const savedConfigurationSchema = z
     }),
     mine: z.boolean().openapi({ description: "Whether the signed-in user owns it (and so may publish or unpublish it)" }),
     createdAt: z.string().openapi({ format: "date-time" }),
-    publishedAt: z.string().nullable().openapi({
-      format: "date-time",
-      description: "When it was published; `null` unless `visibility` is `public`",
-    }),
     config: configSchema,
   })
   .openapi("SavedConfiguration");

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, desc, eq, or, sql } from "drizzle-orm";
+import { and, desc, eq, or } from "drizzle-orm";
 import type { Db } from "@shared/db/client";
 import { configurations, users, type ConfigurationRecord } from "@shared/db/schema";
 
@@ -55,11 +55,7 @@ export function createConfigurationService(db: Db) {
     setPublished(id: string, ownerId: string, published: boolean) {
       return db
         .update(configurations)
-        .set({
-          visibility: published ? "public" : "private",
-          // Publishing again keeps the original date; unpublishing clears it (the table requires both to agree).
-          publishedAt: published ? sql`coalesce(${configurations.publishedAt}, ${Date.now()})` : null,
-        })
+        .set({ visibility: published ? "public" : "private" })
         .where(and(eq(configurations.id, id), eq(configurations.ownerId, ownerId)))
         .returning()
         .get();
