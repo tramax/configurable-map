@@ -88,6 +88,7 @@ Errors are `{ "error": "<message>" }`: `400` invalid input, `401` not signed in,
 - Rename, update and delete, with unique names per user.
 - Finer sharing (named users, groups, links) and a way to manage predefined configurations.
 - Open the user's last configuration on load; save more of the view (sort, widths, filters, basemap, extent).
+- Tell the user when the current configuration differs from the last saved one (unsaved changes), so they know they can save it.
 - Check saved fields against the layer when opening and tell the user what could not be applied.
 - More tests: unit tests for `applySymbology` / `applyTableConfig` (with a stubbed layer), and one browser test of save and open.
 
