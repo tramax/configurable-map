@@ -1,6 +1,5 @@
-import type { z } from "@hono/zod-openapi";
+import type { SavedConfiguration } from "@contract/configuration.schema";
 import type { ConfigurationRecord } from "@shared/db/schema";
-import type { savedConfigurationSchema } from "./configurations.schemas";
 
 /**
  * What the API returns. The owner's id is never sent; a published configuration carries its
@@ -10,7 +9,7 @@ export const toDto = (
   record: ConfigurationRecord,
   author: string | null,
   viewerId: string | null,
-): z.infer<typeof savedConfigurationSchema> => ({
+): SavedConfiguration => ({
   id: record.id,
   datasetId: record.datasetId,
   name: record.name,

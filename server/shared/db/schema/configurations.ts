@@ -8,11 +8,8 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 // Type-only import: erased at runtime, so the server never loads @arcgis/core.
-import type { Configuration } from "@contract/configuration.schema";
+import { VISIBILITIES, type Configuration } from "@contract/configuration.schema";
 import { users } from "./users";
-
-export const VISIBILITIES = ["system", "private", "public"] as const;
-export type Visibility = (typeof VISIBILITIES)[number];
 
 /**
  * Display configurations for a dataset.

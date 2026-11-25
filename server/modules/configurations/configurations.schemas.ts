@@ -1,11 +1,14 @@
 import { z } from "@hono/zod-openapi";
-import { configurationSchema } from "@contract/configuration.schema";
-import { VISIBILITIES } from "@shared/db/schema";
+import { configurationSchema, savedConfigurationSchema as savedConfigurationContract } from "@contract/configuration.schema";
 
 const datasetId = z.string().min(1).max(100).openapi({ example: "landscape-trees" });
 
 /** The configuration itself, as shared with the frontend. Named so the docs define it once. */
-export const configSchema = configurationSchema.openapi("Configuration");
+export const configSchema = configurationSchema
+  // `.extend({})` makes a fresh copy: zod 4 schemas built before `@hono/zod-openapi` was loaded (the
+  // contract may be imported first, e.g. through the db schema) lack `.openapi`, the copy has it.
+  .extend({})
+  .openapi("Configuration", { description: configurationSchema.description });
 
 export const listQuerySchema = z.object({
   datasetId: datasetId.openapi({ description: "Dataset the configurations are for" }),
@@ -19,22 +22,9 @@ export const createBodySchema = z
   })
   .openapi("CreateConfigurationRequest");
 
-export const savedConfigurationSchema = z
-  .object({
-    id: z.string().openapi({ description: "UUID" }),
-    datasetId,
-    name: z.string(),
-    visibility: z.enum(VISIBILITIES).openapi({
-      description: "`private` configurations are visible to their owner only",
-    }),
-    isDefault: z.boolean(),
-    author: z.string().nullable().openapi({
-      description: "Username of the owner; `null` for platform (system) configurations",
-    }),
-    mine: z.boolean().openapi({ description: "Whether the signed-in user owns it (and so may publish or unpublish it)" }),
-    createdAt: z.string().openapi({ format: "date-time" }),
-    config: configSchema,
-  })
+/** The response shape comes from the contract; only the docs names and example are added here. */
+export const savedConfigurationSchema = savedConfigurationContract
+  .extend({ datasetId, config: configSchema })
   .openapi("SavedConfiguration");
 
 export const idParamSchema = z.object({

@@ -61,6 +61,26 @@ export const configurationSchema = z
   })
   .describe("How the points are drawn and which columns the table shows");
 
+export const VISIBILITIES = ["system", "private", "public"] as const;
+export type Visibility = (typeof VISIBILITIES)[number];
+
+/**
+ * A configuration as the API returns it. The owner's id is never sent; a published configuration
+ * carries its author's username instead, and `mine` tells the client whether the viewer may manage it.
+ */
+export const savedConfigurationSchema = z.object({
+  id: z.string().describe("UUID"),
+  datasetId: z.string(),
+  name: z.string(),
+  visibility: z.enum(VISIBILITIES).describe("`private` configurations are visible to their owner only"),
+  isDefault: z.boolean(),
+  author: z.string().nullable().describe("Username of the owner; `null` for platform (system) configurations"),
+  mine: z.boolean().describe("Whether the signed-in user owns it (and so may publish or unpublish it)"),
+  createdAt: z.iso.datetime(),
+  config: configurationSchema,
+});
+
 export type SizeStop = z.infer<typeof sizeStopSchema>;
 export type ColorStop = z.infer<typeof colorStopSchema>;
 export type Configuration = z.infer<typeof configurationSchema>;
+export type SavedConfiguration = z.infer<typeof savedConfigurationSchema>;

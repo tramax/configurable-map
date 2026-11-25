@@ -1,19 +1,7 @@
-import type { Configuration } from "@contract/configuration.schema";
+import type { Configuration, SavedConfiguration } from "@contract/configuration.schema";
 
-/** A configuration as stored by the server. */
-export interface SavedConfiguration {
-  id: string;
-  datasetId: string;
-  name: string;
-  visibility: "system" | "private" | "public";
-  isDefault: boolean;
-  /** Username of the owner; null for predefined configurations. */
-  author: string | null;
-  /** Whether the signed-in user owns it, and so may publish or unpublish it. */
-  mine: boolean;
-  createdAt: string;
-  config: Configuration;
-}
+// The response shape is defined once, in the contract shared with the server.
+export type { SavedConfiguration };
 
 /**
  * Client for the configuration endpoints.
