@@ -3,7 +3,7 @@ import { defineConfig } from "vitest/config";
 
 const at = (p: string) => fileURLToPath(new URL(p, import.meta.url));
 
-// Mirrors the path aliases of server/tsconfig.json. Only the backend is tested here.
+// Mirrors the path aliases of server/tsconfig.json. Backend tests live in server/tests; src/ holds unit tests of the pure map logic.
 export default defineConfig({
   resolve: {
     alias: {
@@ -14,6 +14,6 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["server/tests/**/*.test.ts"],
+    include: ["server/tests/**/*.test.ts", "src/**/*.test.ts"],
   },
 });
