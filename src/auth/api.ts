@@ -4,7 +4,7 @@ export interface AuthUser {
 }
 
 /**
- * Client for the (not yet implemented) auth endpoints. The session lives in an HttpOnly cookie,
+ * Client for the auth endpoints (see server/modules/auth). The session lives in an HttpOnly cookie,
  * so the browser never sees the token - we only ask the server who we are.
  *
  *   GET  /api/auth/me      -> 200 AuthUser | 401
