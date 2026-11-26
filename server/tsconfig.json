@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022"],
+    "types": ["node"],
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "paths": {
+      "@shared/*": ["./shared/*"],
+      "@modules/*": ["./modules/*"],
+      "@contract/*": ["../contract/*"]
+    }
+  },
+  "include": ["./**/*.ts", "../contract/**/*.ts", "../drizzle.config.ts"]
+}

@@ -1,0 +1,22 @@
+.login-menu {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 1000; /* above the map and its widgets */
+}
+
+.login-menu__panel {
+  width: 240px;
+  padding: 12px;
+}
+
+.login-menu__form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.login-menu__signed-in {
+  margin: 0 0 12px;
+  word-break: break-word;
+}

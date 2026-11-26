@@ -1,0 +1,98 @@
+.symbology {
+  position: fixed;
+  top: 12px;
+  right: 60px; /* sits to the left of the account button */
+  z-index: 1000; /* above the map and its widgets */
+}
+
+.symbology__panel {
+  box-sizing: border-box;
+  width: 320px;
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
+  padding: 12px;
+}
+
+.symbology__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.symbology__title {
+  margin: 0;
+  font-size: var(--calcite-font-size-1);
+  font-weight: var(--calcite-font-weight-medium);
+}
+
+.symbology__section {
+  margin-bottom: 12px;
+  padding: 4px 12px 12px;
+  border: 1px solid var(--calcite-color-border-3);
+  border-radius: 4px;
+}
+
+.symbology__section:last-child {
+  margin-bottom: 0;
+}
+
+.symbology__preview {
+  margin: 12px 0 8px;
+}
+
+.symbology__ramp {
+  height: 10px;
+  border: 1px solid var(--calcite-color-border-1);
+  border-radius: 2px;
+}
+
+.symbology__dots {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 40px;
+  padding: 0 8px;
+}
+
+.symbology__dot {
+  flex: none;
+  box-sizing: border-box;
+  border: 1px solid #6e6e6e; /* same look as the size ramp in the map legend */
+  border-radius: 50%;
+  background: #fff;
+}
+
+.symbology__stops {
+  margin: 0 0 4px;
+  padding: 0;
+  list-style: none;
+}
+
+.symbology__stop {
+  display: grid;
+  grid-template-columns: 112px 1fr 28px;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.symbology__stop--fixed {
+  grid-template-columns: 112px 1fr;
+}
+
+/* No Calcite color field fits a single stop row, so this stays the native picker. */
+.symbology__color {
+  width: 100%;
+  height: 32px;
+  padding: 2px;
+  border: 1px solid var(--calcite-color-border-1);
+  border-radius: 2px;
+  background: var(--calcite-color-foreground-1);
+  cursor: pointer;
+}
+
+.symbology__percent {
+  font-variant-numeric: tabular-nums;
+  color: var(--calcite-color-text-3);
+}
