@@ -7,13 +7,13 @@ import {
   text,
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
-// Type-only import: erased at runtime, so the server never loads @arcgis/core.
+// `VISIBILITIES` is a runtime value, so this loads the contract (which imports only zod; no browser or ArcGIS code).
 import { VISIBILITIES, type Configuration } from "@contract/configuration.schema";
 import { users } from "./users";
 
 /**
  * Display configurations for a dataset.
- *  - system:  predefined by the platform (owner is NULL); exactly one per dataset is the default
+ *  - system:  predefined by the platform (owner is NULL); at most one per dataset is the default
  *  - private: a user's saved configuration, visible only to its owner
  *  - public:  a private configuration its owner has published for everyone
  *

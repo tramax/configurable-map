@@ -40,7 +40,8 @@ function describe(item: SavedConfiguration): string {
 
 /**
  * Fixed top-right button (left of the symbology button). Opens a popover where a signed-in user
- * can save what is on screen under a name and reopen any of their saved configurations.
+ * can save what is on screen under a name and open any configuration they may see: their own,
+ * ones shared by others, and the predefined ones.
  */
 export default function ConfigurationsMenu({ user, datasetId, getCurrent, onOpen }: ConfigurationsMenuProps) {
   const [open, setOpen] = useState(false);

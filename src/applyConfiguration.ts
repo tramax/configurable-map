@@ -82,12 +82,3 @@ export const getTableColumns = (
   const available = new Set(getTableFieldNames(layer));
   return table.visibleColumns.map((column) => column.fieldName).filter((name) => available.has(name));
 };
-
-export const configure = (
-  layer: FeatureLayer,
-  table: HTMLArcgisFeatureTableElement,
-  config: Configuration,
-) => {
-  applySymbology(layer, config.symbolConfig);
-  applyTableConfig(layer, table, config.tableConfig);
-};
